@@ -56,7 +56,8 @@ Tout fonctionne **sans API payante**. Une IA (Google Gemini, utilisable avec sa 
 
 ## IA (optionnelle) et vide-frigo
 
-- **Activation** : variable `GEMINI_API_KEY` (clé gratuite sur Google AI Studio). Chaque foyer peut la couper dans *Réglages*. Modèle par défaut `gemini-flash-latest` (variable `GEMINI_MODEL`).
+- **Activation** : variable `GEMINI_API_KEY` (clé Google AI Studio). Chaque foyer peut la couper dans *Réglages*, où **« Tester l'IA »** indique quel modèle répond avec la clé.
+- **Modèles** : l'offre gratuite de Google ne couvre que certains modèles (« N/A » dans AI Studio = pas d'accès gratuit), et cela varie selon les projets et dans le temps. L'appli essaie donc plusieurs modèles dans l'ordre (`gemini-flash-latest`, `gemini-flash-lite-latest`, `gemini-2.5-flash`, `gemini-2.5-flash-lite`, `gemini-2.0-flash`, `gemini-2.0-flash-lite`) et retient le premier qui répond. `GEMINI_MODEL` (liste séparée par des virgules) passe en tête de liste.
 - **Ce que fait l'IA** : lecture des photos (y compris manuscrites, plusieurs pages), structuration des textes collés et des pages web sans données structurées (les pages avec JSON-LD restent lues sans IA), et **demande libre** au planning (« léger mardi, resto vendredi soir, pas de poisson ») traduite en contraintes pour l'algorithme.
 - **Garde-fous** : réponses JSON validées (zod) avec un nouvel essai si invalides, champs incertains signalés à la relecture, contenu traité comme une donnée (pas comme des instructions), et **repli automatique sur les règles locales** si l'IA échoue (quota, panne).
 - **Confidentialité** : avec l'IA, le contenu concerné (photo, texte, demande, titres des recettes pour le planning) est envoyé à Google ; sur l'offre gratuite, Google peut l'utiliser pour améliorer ses services.
@@ -116,7 +117,7 @@ Le port (`PORT`) est fourni par Railway et le cookie de session passe automatiqu
 | `DATA_DIR` | Dossier des données (défaut : volume Railway, sinon `./data`) |
 | `IMPORT_ALLOW_PRIVATE` | `1` autorise l'import depuis des adresses locales (tests uniquement, jamais en production) |
 | `GEMINI_API_KEY` | Clé Google Gemini (optionnelle) : active l'IA |
-| `GEMINI_MODEL` | Modèle Gemini (défaut `gemini-flash-latest`) |
+| `GEMINI_MODEL` | Modèle(s) Gemini à essayer en premier, séparés par des virgules |
 | `APP_TIMEZONE` | Fuseau horaire pour « aujourd'hui » (défaut `Europe/Paris`) |
 | `COOKIE_SECURE` | Force `true`/`false` ; par défaut détecté selon HTTPS |
 

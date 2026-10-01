@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState, useTransition } from "react";
-import { changePassword, generateInvite, renameHousehold, setAiEnabled } from "./actions";
+import { changePassword, generateInvite, renameHousehold, setAiEnabled, testAiAction } from "./actions";
 
 const input = "w-full rounded-lg border border-stone-300 bg-white px-3 py-2";
 
@@ -107,5 +107,27 @@ export function AiToggle({ enabled }: { enabled: boolean }) {
         className="size-5 accent-brand-600"
       />
     </label>
+  );
+}
+
+export function AiTest() {
+  const [result, setResult] = useState<Awaited<ReturnType<typeof testAiAction>> | null>(null);
+  const [pending, start] = useTransition();
+  return (
+    <div className="space-y-2">
+      <button
+        disabled={pending}
+        onClick={() => start(async () => setResult(await testAiAction()))}
+        className="rounded-xl border border-stone-300 px-4 py-2 text-sm disabled:opacity-60"
+      >
+        {pending ? "Test en cours…" : "Tester l'IA"}
+      </button>
+      {result &&
+        (result.ok ? (
+          <p className="rounded-xl bg-green-50 p-2 text-sm text-green-800">✓ L&apos;IA répond avec le modèle {result.model}.</p>
+        ) : (
+          <p className="rounded-xl bg-red-50 p-2 text-sm text-red-800">✗ {result.error}</p>
+        ))}
+    </div>
   );
 }

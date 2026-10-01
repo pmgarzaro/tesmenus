@@ -4,7 +4,7 @@ import { getDb, schema } from "@/db";
 import { requireUser } from "@/lib/auth";
 import { getSettings } from "@/lib/settings";
 import { aiConfigured } from "@/lib/ai/gemini";
-import { AiToggle, HouseholdNameForm, InviteButtons, PasswordForm } from "./AccountSection";
+import { AiTest, AiToggle, HouseholdNameForm, InviteButtons, PasswordForm } from "./AccountSection";
 import { loadSampleRecipes } from "./actions";
 import { SettingsForm } from "./SettingsForm";
 
@@ -35,6 +35,7 @@ export default async function SettingsPage() {
         {aiConfigured() ? (
           <>
             <AiToggle enabled={settings.aiEnabled} />
+            <AiTest />
             <p className="text-sm text-stone-500">
               Avec l&apos;IA (Google Gemini), les photos (même manuscrites), les textes collés et les pages sans données
               structurées sont mieux lus, et le planning accepte une demande libre. Le contenu concerné est alors envoyé à

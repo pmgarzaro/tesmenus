@@ -3,6 +3,7 @@
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getDb, schema } from "@/db";
+import { testAi } from "@/lib/ai/gemini";
 import { createInvite, requireUser } from "@/lib/auth";
 import { MIN_PASSWORD_LENGTH, hashPassword, verifyPassword } from "@/lib/password";
 import { saveSettings } from "@/lib/settings";
@@ -76,4 +77,9 @@ export async function setAiEnabled(enabled: boolean): Promise<void> {
   const user = await requireUser();
   saveSettings(user.householdId, { aiEnabled: enabled });
   revalidatePath("/reglages");
+}
+
+export async function testAiAction() {
+  await requireUser();
+  return testAi();
 }

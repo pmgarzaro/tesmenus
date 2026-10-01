@@ -6,7 +6,7 @@ import path from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "tesmenus-ai-"));
-const { AiError, generateJson, aiConfigured } = await import("./gemini");
+const { AiError, generateJson, aiConfigured, candidateModels, resetWorkingModel, testAi } = await import("./gemini");
 const { extractRecipeFromImages, extractRecipeFromText } = await import("./recipe");
 const { importFromText } = await import("@/lib/import");
 const { importFromPhotos } = await import("@/lib/import/photo");
@@ -39,7 +39,13 @@ afterAll(() => server.close());
 beforeEach(() => {
   replies = [];
   requests.length = 0;
+  resetWorkingModel();
 });
+
+// Every model refuses with this reply.
+const allModels = (r: Reply) => candidateModels().map(() => r);
+const QUOTA: Reply = { status: 429, text: '{"error":{"status":"RESOURCE_EXHAUSTED","message":"Quota exceeded, retry later"}}' };
+const NO_FREE: Reply = { status: 429, text: '{"error":{"message":"Quota exceeded for metric: generate_content_free_tier_requests, limit: 0"}}' };
 
 const CHILI = {
   found: true,
@@ -87,11 +93,35 @@ describe("Gemini client", () => {
     await expect(generateJson({ prompt: "p", schema: {}, validator: z.object({ n: z.number() }) })).rejects.toThrow("inexploitable");
   });
 
-  it("explains quota and key errors", async () => {
-    replies = [{ status: 429, json: {} }];
+  it("falls back to the next model when one has no free access, and remembers it", async () => {
+    replies = [NO_FREE, { status: 404, text: "{}" }, answer({ n: 1 })];
+    expect(await generateJson({ prompt: "p", schema: {}, validator: z.object({ n: z.number() }) })).toEqual({ n: 1 });
+    const models = candidateModels();
+    expect(requests.map((r) => r.url)).toEqual(models.slice(0, 3).map((m) => `/v1beta/models/${m}:generateContent`));
+    // Next call goes straight to the model that worked.
+    replies = [answer({ n: 2 })];
+    await generateJson({ prompt: "p", schema: {}, validator: z.object({ n: z.number() }) });
+    expect(requests[3].url).toBe(`/v1beta/models/${models[2]}:generateContent`);
+  });
+
+  it("explains quota, unusable models and key errors", async () => {
+    replies = allModels(QUOTA);
     await expect(generateJson({ prompt: "p", schema: {}, validator: z.any() })).rejects.toThrow("Quota gratuit");
+    replies = allModels(NO_FREE);
+    await expect(generateJson({ prompt: "p", schema: {}, validator: z.any() })).rejects.toThrow(/Aucun modèle Gemini utilisable.*pas d'accès gratuit/);
     replies = [{ status: 400, text: '{"error":{"message":"API key not valid"}}' }];
     await expect(generateJson({ prompt: "p", schema: {}, validator: z.any() })).rejects.toThrow("Clé GEMINI_API_KEY invalide");
+  });
+
+  it("lets GEMINI_MODEL choose the first model, and reports the working one", async () => {
+    process.env.GEMINI_MODEL = "mon-modele, gemini-2.5-flash-lite";
+    try {
+      expect(candidateModels().slice(0, 2)).toEqual(["mon-modele", "gemini-2.5-flash-lite"]);
+      replies = [{ status: 404, text: "{}" }, answer({ ok: true })];
+      expect(await testAi()).toEqual({ ok: true, model: "gemini-2.5-flash-lite" });
+    } finally {
+      delete process.env.GEMINI_MODEL;
+    }
   });
 });
 
@@ -135,14 +165,14 @@ describe("imports with AI", () => {
     replies = [answer(CHILI)];
     expect((await importFromText("n'importe", { ai: true })).method).toBe("ai");
 
-    replies = [{ status: 429, json: {} }];
+    replies = allModels(QUOTA);
     const fallback = await importFromText("Omelette\nIngrédients\n3 œufs\nPréparation\nBattre.", { ai: true });
     expect(fallback.method).toBe("text");
     expect(fallback.warnings[0]).toMatch(/IA indisponible \(Quota gratuit/);
     expect(fallback.draft.ingredients).toHaveLength(1);
 
     expect((await importFromText("Omelette\n3 œufs\nBattre.")).method).toBe("text"); // AI off: no request
-    expect(requests).toHaveLength(2);
+    expect(requests).toHaveLength(1 + candidateModels().length);
   });
 
   it("reads photos with the AI, keeps them, falls back to OCR", { timeout: 60_000 }, async () => {
@@ -152,7 +182,7 @@ describe("imports with AI", () => {
     expect(viaAi.result.method).toBe("ai");
     expect(viaAi.imagePaths).toHaveLength(1);
 
-    replies = [{ status: 500 }];
+    replies = allModels({ status: 500 });
     const viaOcr = await importFromPhotos(3, [photo], undefined, { ai: true });
     expect(viaOcr.result.method).toBe("photo");
     expect(viaOcr.result.draft.title).toBe("Hachis parmentier");
