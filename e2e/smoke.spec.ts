@@ -35,7 +35,7 @@ test("parcours principal", async ({ page }) => {
   await page.locator("input[type=date]").fill("2026-10-05");
   await page.getByRole("button", { name: "Générer le planning" }).click();
   await expect(page).toHaveURL(/\/planning\/\d+/);
-  await expect(page.getByText("♻️ Restes").first()).toBeVisible();
+  await expect(page.getByText(/^Restes : /).first()).toBeVisible();
 
   // Shopping list
   await page.getByText("Liste de courses de ce planning").click();
