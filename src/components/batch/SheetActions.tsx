@@ -8,7 +8,7 @@ export function SheetActions({ id }: { id: number }) {
   const [pending, start] = useTransition();
   return (
     <div className="flex flex-wrap items-center gap-3 print:hidden">
-      <Link href={`/cuisine/${id}`} className="rounded-xl bg-brand-600 px-5 py-2.5 font-semibold text-white">
+      <Link href={`/cuisine/${id}`} className="btn-primary px-5 py-2.5 font-semibold text-white">
         👩‍🍳 Mode cuisine
       </Link>
       <button onClick={() => window.print()} className="rounded-xl border border-stone-300 bg-white px-4 py-2.5">

@@ -14,7 +14,7 @@ export default async function HistoryPage() {
     <>
       <PageHeader
         title="Plannings"
-        action={<Link href="/planning/nouveau" className="rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white">Nouveau</Link>}
+        action={<Link href="/planning/nouveau" className="btn-primary px-4 py-2 text-sm font-semibold text-white">Nouveau</Link>}
       />
       {plans.length === 0 ? (
         <p className="p-6 text-center text-stone-500">Aucun planning.</p>
@@ -25,7 +25,7 @@ export default async function HistoryPage() {
             const state = end < t ? "passé" : p.startDate > t ? "à venir" : "en cours";
             return (
               <li key={p.id}>
-                <Link href={`/planning/${p.id}`} className="flex items-center justify-between rounded-2xl bg-white px-4 py-3 shadow-sm">
+                <Link href={`/planning/${p.id}`} className="flex items-center justify-between paper px-4 py-3">
                   <span>
                     Du {longDate(p.startDate)} au {longDate(end)}
                     <span className="block text-xs text-stone-500">{p.days} jour{p.days > 1 ? "s" : ""}</span>

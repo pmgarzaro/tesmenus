@@ -51,7 +51,7 @@ export default async function PlanPage({
         <Link href="/planning/nouveau" className="text-brand-700">+ Nouveau planning</Link>
       </div>
       <header className="mb-4 space-y-2">
-        <h1 className="text-2xl font-bold">
+        <h1 className="font-hand text-[2.3rem] font-bold leading-none">
           Du {longDate(plan.startDate)} au {longDate(addDays(plan.startDate, plan.days - 1))}
         </h1>
         <p className="text-sm text-stone-500">
@@ -73,7 +73,7 @@ export default async function PlanPage({
       <PlanGrid planId={plan.id} entries={entries} recipes={recipes} today={today()} />
       <Link
         href={`/courses/${plan.id}`}
-        className="mt-4 block rounded-2xl bg-brand-600 p-3 text-center font-semibold text-white"
+        className="mt-4 block btn-primary p-3 text-center font-semibold text-white"
       >
         🛒 Liste de courses de ce planning
       </Link>

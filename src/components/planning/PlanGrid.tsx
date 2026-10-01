@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { type CellAction, editCell } from "@/app/(app)/planning/actions";
 import { formatMinutes } from "@/lib/labels";
 import { shortDate, weekdayName } from "@/lib/planning/dates";
+import { noteAt, tiltAt } from "@/lib/notes";
 import { fold } from "@/lib/recipes/normalize";
 
 export type GridEntry = {
@@ -65,12 +66,15 @@ export function PlanGrid({ planId, entries, recipes, today }: { planId: number; 
       )}
       {error && !selected && <p className="mb-3 rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
 
-      <div className={`grid grid-cols-1 gap-3 sm:grid-cols-2 ${pending ? "opacity-70" : ""}`}>
-        {dates.map((date) => (
-          <section key={date} className={`min-w-0 rounded-2xl bg-white p-3 shadow-sm ${date === today ? "ring-2 ring-brand-500" : ""}`}>
-            <h2 className="mb-2 flex items-baseline justify-between font-semibold">
+      <div className={`grid grid-cols-1 gap-x-4 gap-y-6 pt-2 sm:grid-cols-2 ${pending ? "opacity-70" : ""}`}>
+        {dates.map((date, i) => (
+          <section
+            key={date}
+            className={`postit magnet min-w-0 p-3 pt-4 ${noteAt(i).note} ${noteAt(i).magnet} ${tiltAt(i)} ${date === today ? "outline-2 outline-offset-2 outline-brand-500" : ""}`}
+          >
+            <h2 className="mb-2 flex items-baseline justify-between">
               {capitalize(shortDate(date))}
-              {date === today && <span className="text-xs font-normal text-brand-700">aujourd&apos;hui</span>}
+              {date === today && <span className="font-hand text-lg text-brand-700">aujourd&apos;hui !</span>}
             </h2>
             <ul className="space-y-2">
               {entries.filter((e) => e.date === date).map((e) => {
@@ -80,8 +84,8 @@ export function PlanGrid({ planId, entries, recipes, today }: { planId: number; 
                     <button
                       onClick={() => onCell(e)}
                       disabled={!swappable}
-                      className={`flex w-full gap-3 rounded-xl border px-3 py-2 text-left disabled:opacity-40 ${
-                        swapFrom && swappable ? "border-brand-500 bg-brand-50" : "border-stone-200"
+                      className={`flex w-full gap-3 rounded-md border px-3 py-2 text-left disabled:opacity-40 ${
+                        swapFrom && swappable ? "border-brand-500 bg-brand-50" : "border-black/5 bg-white/70"
                       }`}
                     >
                       <span className="w-10 shrink-0 pt-0.5 text-xs font-medium uppercase text-stone-400">{slotLabel[e.slot]}</span>

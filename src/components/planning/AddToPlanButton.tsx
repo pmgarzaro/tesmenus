@@ -36,7 +36,7 @@ export function AddToPlanButton({ recipeId, plans }: { recipeId: number; plans: 
           setDone(null);
           setOpen(true);
         }}
-        className="w-full rounded-xl bg-brand-600 py-2.5 font-semibold text-white"
+        className="w-full btn-primary py-2.5 font-semibold text-white"
       >
         📅 Ajouter au planning
       </button>

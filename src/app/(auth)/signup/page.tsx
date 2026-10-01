@@ -17,7 +17,7 @@ export default async function SignupPage({
   if (!target) {
     return (
       <>
-        <p className="mb-6 text-stone-600">
+        <p className="mb-5 text-stone-700">
           {invite
             ? "Ce lien d'invitation a expiré ou a déjà été utilisé. Demande-en un nouveau."
             : "L'inscription se fait sur invitation : demande un lien à un membre du foyer (Réglages → Inviter quelqu'un)."}
@@ -29,7 +29,7 @@ export default async function SignupPage({
 
   return (
     <>
-      <p className="mb-8 text-stone-500">
+      <p className="mb-5 text-stone-700">
         {target.kind === "first" &&
           "Bienvenue ! Crée le premier compte. Tu pourras ensuite inviter d'autres personnes."}
         {target.kind === "join" && (

@@ -47,7 +47,7 @@ export function NewBatchForm({
       }}
       className="space-y-4"
     >
-      <section className="space-y-3 rounded-2xl bg-white p-4 shadow-sm">
+      <section className="space-y-3 paper p-4">
         <label className="block text-sm text-stone-600">
           Jour de la session
           <input type="date" value={sessionDate} onChange={(e) => setSessionDate(e.target.value)} required className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2" />
@@ -68,7 +68,7 @@ export function NewBatchForm({
       </section>
 
       {candidates.length > 0 && (
-        <section className="space-y-2 rounded-2xl bg-white p-4 shadow-sm">
+        <section className="space-y-2 paper p-4">
           <h2 className="font-semibold">Repas du planning</h2>
           <ul className="space-y-1">
             {candidates.map((c) => (
@@ -93,7 +93,7 @@ export function NewBatchForm({
         </section>
       )}
 
-      <section className="space-y-2 rounded-2xl bg-white p-4 shadow-sm">
+      <section className="space-y-2 paper p-4">
         <h2 className="font-semibold">Ajouter une recette de la bibliothèque</h2>
         {extra.map((x, i) => {
           const r = recipes.find((y) => y.id === x.recipeId)!;
@@ -142,7 +142,7 @@ export function NewBatchForm({
       </section>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
-      <button disabled={pending || total < 2} className="w-full rounded-xl bg-brand-600 py-3 font-semibold text-white disabled:opacity-50">
+      <button disabled={pending || total < 2} className="w-full btn-primary py-3 font-semibold text-white disabled:opacity-50">
         {pending ? "Préparation de la fiche…" : total < 2 ? "Choisis au moins 2 plats" : `Créer la fiche (${total} plats)`}
       </button>
     </form>

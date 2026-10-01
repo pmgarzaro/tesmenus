@@ -49,7 +49,7 @@ export function LibraryFilters({ tags }: { tags: string[] }) {
         onChange={(e) => setQ(e.target.value)}
         placeholder="Rechercher une recette, un ingrédient…"
         aria-label="Rechercher"
-        className="w-full rounded-xl border border-stone-300 bg-white px-4 py-2.5 outline-none focus:border-brand-500"
+        className="w-full rounded-full border border-stone-300/80 bg-white px-4 py-2.5 shadow-[inset_0_1px_2px_rgb(0_0_0/0.06)] outline-none focus:border-brand-500"
       />
       <div className="flex flex-wrap gap-2">
         <select
@@ -101,7 +101,7 @@ export function LibraryFilters({ tags }: { tags: string[] }) {
                 onClick={() => toggleTag(t)}
                 aria-pressed={on}
                 className={`shrink-0 rounded-full px-3 py-1 text-sm ${
-                  on ? "bg-brand-600 text-white" : "border border-stone-300 bg-white text-stone-700"
+                  on ? "bg-ink text-white" : "border border-stone-300 bg-white text-stone-700"
                 }`}
               >
                 {t}

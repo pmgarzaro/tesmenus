@@ -59,7 +59,7 @@ export function ImportReview({
         </div>
       )}
       {ocrText && (
-        <details className="rounded-2xl bg-white p-3 text-sm shadow-sm">
+        <details className="paper p-3 text-sm">
           <summary className="cursor-pointer text-stone-600">Texte lu sur la photo (pour copier-coller)</summary>
           <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap font-sans text-stone-700">{ocrText}</pre>
         </details>

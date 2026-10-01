@@ -16,7 +16,7 @@ export default async function ShoppingPage({ params }: { params: Promise<{ planI
   return (
     <>
       <Link href={`/planning/${plan.id}`} className="text-sm text-stone-500">← Planning {period}</Link>
-      <h1 className="mb-3 mt-1 text-2xl font-bold">Liste de courses</h1>
+      <h1 className="mb-3 mt-1 font-hand text-[2.4rem] font-bold leading-none">Liste de courses</h1>
       <ShoppingList planId={plan.id} title={`Courses ${period}`} items={list.items} manual={list.manual} />
     </>
   );
