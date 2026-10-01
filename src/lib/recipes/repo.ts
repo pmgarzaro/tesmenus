@@ -215,3 +215,24 @@ export function listRecipeSummaries(householdId: number): RecipeSummary[] {
     .map((r) => ({ ...r, ingredientNames: byRecipe.get(r.id) ?? [] }))
     .sort((a, b) => a.title.localeCompare(b.title, "fr"));
 }
+
+/** Recipes with their ingredients (and optional flag) for the "vide-frigo". */
+export function listFridgeRecipes(householdId: number) {
+  const db = getDb();
+  const rows = db
+    .select({
+      recipeId: schema.recipeIngredients.recipeId,
+      name: schema.ingredients.name,
+      optional: schema.recipeIngredients.optional,
+    })
+    .from(schema.recipeIngredients)
+    .innerJoin(schema.ingredients, eq(schema.ingredients.id, schema.recipeIngredients.ingredientId))
+    .where(eq(schema.ingredients.householdId, householdId))
+    .all();
+  return listRecipeSummaries(householdId).map((r) => ({
+    id: r.id,
+    title: r.title,
+    minutes: (r.prepMinutes ?? 0) + (r.cookMinutes ?? 0),
+    ingredients: rows.filter((x) => x.recipeId === r.id).map((x) => ({ name: x.name, optional: x.optional })),
+  }));
+}

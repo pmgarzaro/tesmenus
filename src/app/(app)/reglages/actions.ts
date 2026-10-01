@@ -71,3 +71,9 @@ export async function changePassword(_prev: string | null, form: FormData): Prom
     .run();
   return "Mot de passe modifié";
 }
+
+export async function setAiEnabled(enabled: boolean): Promise<void> {
+  const user = await requireUser();
+  saveSettings(user.householdId, { aiEnabled: enabled });
+  revalidatePath("/reglages");
+}

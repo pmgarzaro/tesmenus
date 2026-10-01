@@ -12,6 +12,8 @@ export const settingsSchema = z.object({
   dinnerCoversNextLunch: z.boolean(),
   /** Ingredients always at home: left out of shopping lists. */
   pantry: z.array(z.string()).max(200),
+  /** Use Gemini when GEMINI_API_KEY is set (recipes are then sent to Google). */
+  aiEnabled: z.boolean(),
 });
 
 export type Settings = z.infer<typeof settingsSchema>;
@@ -23,6 +25,7 @@ export const DEFAULT_SETTINGS: Settings = {
   servingsPerRecipe: 4,
   dinnerCoversNextLunch: true,
   pantry: ["sel", "poivre", "eau"],
+  aiEnabled: true,
 };
 
 export function getSettings(householdId: number): Settings {

@@ -1,6 +1,9 @@
 import { type OcrResult, ocrImage } from "@/lib/ocr";
 import { eq } from "drizzle-orm";
 import { getDb, schema } from "@/db";
+import sharp from "sharp";
+import { AiError } from "@/lib/ai/gemini";
+import { extractRecipeFromImages } from "@/lib/ai/recipe";
 import { cleanupOrphanPhotos, saveRecipePhoto } from "@/lib/uploads";
 import { type ImportResult, buildDraft } from "./build";
 import { parseRecipeText } from "./text";
@@ -20,6 +23,7 @@ export async function importFromPhotos(
   householdId: number,
   photos: Buffer[],
   onProgress?: (done: number, total: number) => void,
+  opts: { ai?: boolean } = {},
 ): Promise<PhotoImport> {
   // Housekeeping: photos of imports never saved, older than a day.
   try {
@@ -35,9 +39,28 @@ export async function importFromPhotos(
   }
 
   const imagePaths: string[] = [];
+  let aiFailure: string | null = null;
+  if (opts.ai) {
+    for (const photo of photos) imagePaths.push(await saveRecipePhoto(householdId, photo));
+    try {
+      // Upright, ≤ 1600 px JPEG: enough for the model, small to send.
+      const images = await Promise.all(
+        photos.map((p) =>
+          sharp(p, { failOn: "none" }).rotate().resize({ width: 1600, height: 1600, fit: "inside", withoutEnlargement: true }).jpeg({ quality: 85 }).toBuffer(),
+        ),
+      );
+      const result = await extractRecipeFromImages(images);
+      onProgress?.(photos.length, photos.length);
+      return { result, imagePaths, ocrText: "" };
+    } catch (e) {
+      if (!(e instanceof AiError)) console.error("AI photo import", e);
+      aiFailure = e instanceof AiError ? e.message : "erreur";
+    }
+  }
+
   const pages: OcrResult[] = [];
   for (const [i, photo] of photos.entries()) {
-    imagePaths.push(await saveRecipePhoto(householdId, photo));
+    if (!opts.ai) imagePaths.push(await saveRecipePhoto(householdId, photo)); // already saved if the AI was tried
     pages.push(await ocrImage(photo));
     onProgress?.(i + 1, photos.length);
   }
@@ -54,5 +77,6 @@ export async function importFromPhotos(
     );
   }
   if (pages.some((p) => p.rotation)) result.warnings.push("Photo tournée automatiquement pour la lecture.");
+  if (aiFailure) result.warnings.unshift(`IA indisponible (${aiFailure}) : lecture locale de la photo.`);
   return { result, imagePaths, ocrText };
 }

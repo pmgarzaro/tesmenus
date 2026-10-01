@@ -15,10 +15,12 @@ export function NewPlanForm({
   defaults,
   recipes,
   tags,
+  aiAvailable,
 }: {
   defaults: { startDate: string; days: number; slots: ("midi" | "soir")[] };
   recipes: Recipe[];
   tags: string[];
+  aiAvailable: boolean;
 }) {
   const [startDate, setStartDate] = useState(defaults.startDate);
   const [days, setDays] = useState(defaults.days);
@@ -29,6 +31,7 @@ export function NewPlanForm({
   const [onlyFreezable, setOnlyFreezable] = useState(false);
   const [excludeTags, setExcludeTags] = useState<string[]>([]);
   const [mode, setMode] = useState<"auto" | "manual">("auto");
+  const [request, setRequest] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
@@ -52,6 +55,7 @@ export function NewPlanForm({
         onlyFreezable,
         excludeTags,
         mode,
+        request: request.trim() || undefined,
       });
       if (err) setError(err);
     });
@@ -101,6 +105,26 @@ export function NewPlanForm({
           ))}
         </div>
       </section>
+
+      {aiAvailable && (
+        <section className={`${box} border border-violet-200`}>
+          <label className="block space-y-2">
+            <span className="font-semibold">✨ Demande libre</span>
+            <span className="block text-sm text-stone-500">
+              Dis ce que tu veux, l&apos;IA le transforme en contraintes. Ex. : « léger mardi et jeudi, on mange au resto
+              vendredi soir, pas de poisson, mettre le chili ».
+            </span>
+            <textarea
+              value={request}
+              onChange={(e) => setRequest(e.target.value)}
+              rows={3}
+              maxLength={1000}
+              placeholder="Facultatif"
+              className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2"
+            />
+          </label>
+        </section>
+      )}
 
       <section className={box}>
         <h2 className="font-semibold">
@@ -205,7 +229,13 @@ export function NewPlanForm({
 
       {error && <p className="text-sm text-red-600">{error}</p>}
       <button disabled={pending || slots.length === 0} className="w-full rounded-xl bg-brand-600 py-3 font-semibold text-white disabled:opacity-60">
-        {pending ? "Création…" : mode === "auto" ? "Générer le planning" : "Créer le planning vide"}
+        {pending
+          ? request.trim()
+            ? "L'IA lit ta demande…"
+            : "Création…"
+          : mode === "auto"
+            ? "Générer le planning"
+            : "Créer le planning vide"}
       </button>
     </form>
   );

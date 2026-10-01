@@ -2,7 +2,7 @@
 
 Application web perso de planification de repas pour le foyer : recettes, planning de la semaine, liste de courses et batch cooking.
 
-Tout tourne en local, **sans API payante** : pas de LLM. L'import des recettes repose sur le JSON-LD `schema.org/Recipe`, l'analyse heuristique du HTML ou du texte, et l'OCR local pour les photos. Le planning et le batch cooking sont calculés par des algorithmes en code.
+Tout fonctionne **sans API payante**. Une IA (Google Gemini, utilisable avec sa clé gratuite) peut être activée en option pour mieux lire les recettes et comprendre les demandes libres ; sans elle, l'appli utilise ses règles locales. L'import des recettes repose sur le JSON-LD `schema.org/Recipe`, l'analyse heuristique du HTML ou du texte, et l'OCR local pour les photos. Le planning et le batch cooking sont calculés par des algorithmes en code.
 
 ## Comptes et foyers
 
@@ -53,6 +53,14 @@ Tout tourne en local, **sans API payante** : pas de LLM. L'import des recettes r
 - Import par lien : adresses publiques uniquement (pas d'accès au réseau interne du serveur).
 - Photos servies aux seuls membres du foyer ; les photos d'imports abandonnés sont supprimées après 24 h.
 - CI GitHub Actions : types, tests, build et parcours de bout en bout à chaque push.
+
+## IA (optionnelle) et vide-frigo
+
+- **Activation** : variable `GEMINI_API_KEY` (clé gratuite sur Google AI Studio). Chaque foyer peut la couper dans *Réglages*. Modèle par défaut `gemini-flash-latest` (variable `GEMINI_MODEL`).
+- **Ce que fait l'IA** : lecture des photos (y compris manuscrites, plusieurs pages), structuration des textes collés et des pages web sans données structurées (les pages avec JSON-LD restent lues sans IA), et **demande libre** au planning (« léger mardi, resto vendredi soir, pas de poisson ») traduite en contraintes pour l'algorithme.
+- **Garde-fous** : réponses JSON validées (zod) avec un nouvel essai si invalides, champs incertains signalés à la relecture, contenu traité comme une donnée (pas comme des instructions), et **repli automatique sur les règles locales** si l'IA échoue (quota, panne).
+- **Confidentialité** : avec l'IA, le contenu concerné (photo, texte, demande, titres des recettes pour le planning) est envoyé à Google ; sur l'offre gratuite, Google peut l'utiliser pour améliorer ses services.
+- **Vide-frigo** (sans IA) : *Recettes → 🧊 Vide-frigo*, saisir ce qu'on a ; les recettes sont classées par pourcentage d'ingrédients disponibles, avec ce qui manque (basiques et « toujours au placard » considérés comme présents).
 
 ## Stack
 
@@ -107,6 +115,8 @@ Le port (`PORT`) est fourni par Railway et le cookie de session passe automatiqu
 | `SESSION_SECRET` | Secret de signature du cookie (optionnel, généré sinon) |
 | `DATA_DIR` | Dossier des données (défaut : volume Railway, sinon `./data`) |
 | `IMPORT_ALLOW_PRIVATE` | `1` autorise l'import depuis des adresses locales (tests uniquement, jamais en production) |
+| `GEMINI_API_KEY` | Clé Google Gemini (optionnelle) : active l'IA |
+| `GEMINI_MODEL` | Modèle Gemini (défaut `gemini-flash-latest`) |
 | `APP_TIMEZONE` | Fuseau horaire pour « aujourd'hui » (défaut `Europe/Paris`) |
 | `COOKIE_SECURE` | Force `true`/`false` ; par défaut détecté selon HTTPS |
 

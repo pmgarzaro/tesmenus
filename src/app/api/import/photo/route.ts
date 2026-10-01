@@ -1,4 +1,5 @@
 import { getCurrentUser } from "@/lib/auth";
+import { aiEnabledFor } from "@/lib/ai/enabled";
 import { MAX_PHOTOS, MAX_PHOTO_BYTES, importFromPhotos } from "@/lib/import/photo";
 
 export const dynamic = "force-dynamic";
@@ -30,10 +31,14 @@ export async function POST(request: Request) {
   const stream = new ReadableStream({
     async start(controller) {
       const send = (msg: object) => controller.enqueue(encoder.encode(JSON.stringify(msg) + "\n"));
-      send({ type: "progress", done: 0, total: buffers.length });
+      const ai = aiEnabledFor(user.householdId);
+      send({ type: "progress", done: 0, total: buffers.length, ai });
       try {
-        const out = await importFromPhotos(user.householdId, buffers, (done, total) =>
-          send({ type: "progress", done, total }),
+        const out = await importFromPhotos(
+          user.householdId,
+          buffers,
+          (done, total) => send({ type: "progress", done, total }),
+          { ai },
         );
         send({ type: "result", ...out });
       } catch (e) {

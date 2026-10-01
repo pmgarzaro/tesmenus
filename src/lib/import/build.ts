@@ -36,7 +36,7 @@ export type FieldFlags = {
   steps?: Record<number, Flag>;
 };
 
-export type ImportMethod = "jsonld" | "html" | "text" | "photo";
+export type ImportMethod = "jsonld" | "html" | "text" | "photo" | "ai";
 export type ImportResult = {
   draft: RecipeInput;
   flags: FieldFlags;

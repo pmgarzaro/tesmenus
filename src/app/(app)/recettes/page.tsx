@@ -31,7 +31,16 @@ export default async function RecipesPage({ searchParams }: { searchParams: Prom
 
   return (
     <>
-      <PageHeader title="Recettes" action={<span className="text-sm text-stone-500">{all.length} au total</span>} />
+      <PageHeader
+        title="Recettes"
+        action={
+          all.length > 0 && (
+            <Link href="/recettes/vide-frigo" className="rounded-xl border border-stone-300 bg-white px-3 py-1.5 text-sm">
+              🧊 Vide-frigo
+            </Link>
+          )
+        }
+      />
       {all.length === 0 ? (
         <div className="space-y-3 rounded-2xl border border-dashed border-stone-300 p-6 text-center text-stone-500">
           <p>Ta bibliothèque est vide.</p>

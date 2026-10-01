@@ -107,8 +107,8 @@ describe("HTML fallback", () => {
 });
 
 describe("pasted text", () => {
-  it("parses an Instagram-like caption", () => {
-    const { draft, flags } = importFromText(`🍝 Pâtes crémeuses au saumon
+  it("parses an Instagram-like caption", async () => {
+    const { draft, flags } = await importFromText(`🍝 Pâtes crémeuses au saumon
 Prêtes en 20 minutes !
 Pour 2 personnes
 
@@ -135,22 +135,22 @@ Préparation :
     expect(flags.prepMinutes).toBe("missing");
   });
 
-  it("splits text without headings", () => {
-    const { draft } = importFromText("Omelette\n3 œufs\n1 pincée de sel\nBattre les œufs avec le sel.\nCuire 3 min à la poêle.");
+  it("splits text without headings", async () => {
+    const { draft } = await importFromText("Omelette\n3 œufs\n1 pincée de sel\nBattre les œufs avec le sel.\nCuire 3 min à la poêle.");
     expect(draft.title).toBe("Omelette");
     expect(draft.ingredients.map((i) => i.label)).toEqual(["œufs", "sel"]);
     expect(draft.steps).toHaveLength(2);
     expect(draft.servings).toBe(4);
   });
 
-  it("does not take a sub-heading for servings", () => {
-    const { draft } = importFromText("Tarte\nPour 6 personnes\nIngrédients\nPour la pâte : 250 g de farine\n125 g de beurre\nPréparation\nMélanger.");
+  it("does not take a sub-heading for servings", async () => {
+    const { draft } = await importFromText("Tarte\nPour 6 personnes\nIngrédients\nPour la pâte : 250 g de farine\n125 g de beurre\nPréparation\nMélanger.");
     expect(draft.servings).toBe(6);
     expect(draft.ingredients[0].label).toMatch(/farine/);
   });
 
-  it("flags lines whose quantity was not understood", () => {
-    const { flags } = importFromText("Test\nIngrédients\n200 g de farine\nun peu de 3 épices\nPréparation\nMélanger");
+  it("flags lines whose quantity was not understood", async () => {
+    const { flags } = await importFromText("Test\nIngrédients\n200 g de farine\nun peu de 3 épices\nPréparation\nMélanger");
     expect(flags.ingredients).toEqual({ 1: "guess" });
   });
 });

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
 import { NewPlanForm } from "@/components/planning/NewPlanForm";
+import { aiEnabledFor } from "@/lib/ai/enabled";
 import { requireUser } from "@/lib/auth";
 import { defaultStartDate } from "@/lib/planning/dates";
 import { listRecipeSummaries } from "@/lib/recipes/repo";
@@ -29,6 +30,7 @@ export default async function NewPlanPage() {
           defaults={{ startDate: defaultStartDate(), days: settings.defaultDays, slots: settings.activeSlots }}
           recipes={recipes}
           tags={tagCounts(summaries).map((t) => t.tag)}
+          aiAvailable={aiEnabledFor(householdId)}
         />
       )}
     </>

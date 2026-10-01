@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState, useTransition } from "react";
-import { changePassword, generateInvite, renameHousehold } from "./actions";
+import { changePassword, generateInvite, renameHousehold, setAiEnabled } from "./actions";
 
 const input = "w-full rounded-lg border border-stone-300 bg-white px-3 py-2";
 
@@ -86,5 +86,26 @@ export function PasswordForm() {
         {message && <span className="text-sm text-stone-600">{message}</span>}
       </div>
     </form>
+  );
+}
+
+export function AiToggle({ enabled }: { enabled: boolean }) {
+  const [on, setOn] = useState(enabled);
+  const [pending, start] = useTransition();
+  return (
+    <label className="flex items-center justify-between gap-4">
+      <span>Utiliser l&apos;IA pour ce foyer</span>
+      <input
+        type="checkbox"
+        checked={on}
+        disabled={pending}
+        onChange={(e) => {
+          const next = e.target.checked;
+          setOn(next);
+          start(() => setAiEnabled(next));
+        }}
+        className="size-5 accent-brand-600"
+      />
+    </label>
   );
 }

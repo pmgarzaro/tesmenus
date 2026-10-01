@@ -9,6 +9,7 @@ const METHOD_NOTE = {
   html: { text: "Extraction approximative à partir de la mise en page.", tone: "bg-amber-50 text-amber-800" },
   text: { text: "Texte analysé ligne par ligne.", tone: "bg-amber-50 text-amber-800" },
   photo: { text: "Texte lu sur la photo.", tone: "bg-amber-50 text-amber-800" },
+  ai: { text: "✨ Recette lue par l'IA (Gemini).", tone: "bg-violet-50 text-violet-800" },
 };
 
 /** Review screen shared by every import: banner, photos / raw text, pre-filled form. */

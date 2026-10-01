@@ -9,7 +9,7 @@ type Page = { id: number; file: File; preview: string };
 type Status =
   | { step: "idle" }
   | { step: "upload" }
-  | { step: "ocr"; done: number; total: number }
+  | { step: "ocr"; done: number; total: number; ai?: boolean }
   | { step: "error"; message: string };
 
 let nextId = 1;
@@ -32,7 +32,7 @@ async function shrink(file: File): Promise<Blob> {
   }
 }
 
-async function readStream(res: Response, onProgress: (done: number, total: number) => void): Promise<PhotoResult> {
+async function readStream(res: Response, onProgress: (done: number, total: number, ai?: boolean) => void): Promise<PhotoResult> {
   const reader = res.body!.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
@@ -44,7 +44,7 @@ async function readStream(res: Response, onProgress: (done: number, total: numbe
     while ((nl = buffer.indexOf("\n")) >= 0) {
       const msg = JSON.parse(buffer.slice(0, nl));
       buffer = buffer.slice(nl + 1);
-      if (msg.type === "progress") onProgress(msg.done, msg.total);
+      if (msg.type === "progress") onProgress(msg.done, msg.total, msg.ai);
       if (msg.type === "error") throw new Error(msg.error);
       if (msg.type === "result") return msg as PhotoResult;
     }
@@ -103,7 +103,13 @@ export function PhotoImport({ allTags }: { allTags: string[] }) {
         const body = await res.json().catch(() => null);
         throw new Error(body?.error ?? `Erreur ${res.status}`);
       }
-      setResult(await readStream(res, (done, total) => setStatus({ step: "ocr", done, total })));
+      let ai = false;
+      setResult(
+        await readStream(res, (done, total, isAi) => {
+          ai ||= Boolean(isAi);
+          setStatus({ step: "ocr", done, total, ai });
+        }),
+      );
       setStatus({ step: "idle" });
     } catch (e) {
       setStatus({ step: "error", message: e instanceof Error ? e.message : "Envoi impossible." });
@@ -130,7 +136,7 @@ export function PhotoImport({ allTags }: { allTags: string[] }) {
     <div className="space-y-4 rounded-2xl bg-white p-4 shadow-sm">
       <p className="text-sm text-stone-600">
         Photographie la recette bien à plat, avec une bonne lumière et sans reflet. Une photo par page, dans
-        l&apos;ordre. Les recettes imprimées sont bien lues ; l&apos;écriture manuscrite beaucoup moins.
+        l&apos;ordre.
       </p>
 
       <input ref={cameraInput} type="file" accept="image/*" capture="environment" hidden onChange={(e) => { add(e.target.files); e.target.value = ""; }} />
@@ -183,7 +189,9 @@ export function PhotoImport({ allTags }: { allTags: string[] }) {
           <p className="text-sm text-stone-600">
             {status.step === "upload"
               ? "Envoi des photos…"
-              : `Lecture de la page ${Math.min(status.done + 1, status.total)} sur ${status.total}…`}{" "}
+              : status.ai
+                ? "✨ Lecture par l'IA (environ 10 à 30 s)…"
+                : `Lecture de la page ${Math.min(status.done + 1, status.total)} sur ${status.total}…`}{" "}
             {elapsed > 0 && <span className="text-stone-400">{elapsed} s</span>}
           </p>
         </div>

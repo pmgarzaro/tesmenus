@@ -91,3 +91,12 @@ export function extractHtmlRecipe(html: string | HTMLElement): RawRecipe {
   const raw = parseRecipeText(textOf(main));
   return { ...raw, title: title(root) ?? raw.title };
 }
+
+/** Readable text of a page (for the AI), without menus, scripts and footers. */
+export function pageText(html: string | HTMLElement): string {
+  const root = typeof html === "string" ? parse(html) : html;
+  root.querySelectorAll("script, style, noscript, nav, footer, header, aside, form, iframe, svg").forEach((el) => el.remove());
+  const main = root.querySelector("article") ?? root.querySelector("main") ?? root.querySelector("body") ?? root;
+  const title = root.querySelector("title")?.text ?? "";
+  return `${title}\n${textOf(main)}`.replace(/\n{3,}/g, "\n\n").trim();
+}
