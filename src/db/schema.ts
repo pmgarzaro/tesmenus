@@ -129,6 +129,8 @@ export const mealPlans = sqliteTable("meal_plans", {
   householdId: householdId(),
   startDate: text("start_date").notNull(), // YYYY-MM-DD
   days: integer("days").notNull(),
+  // Generation settings (slots, servings, constraints…) reused by rerolls.
+  options: text("options", { mode: "json" }).$type<Record<string, unknown>>().notNull().default(sql`'{}'`),
   createdAt: createdAt(),
 });
 

@@ -1,0 +1,1 @@
+ALTER TABLE `meal_plans` ADD `options` text DEFAULT '{}' NOT NULL;

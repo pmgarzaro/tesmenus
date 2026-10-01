@@ -24,6 +24,14 @@ Tout tourne en local, **sans API payante** : pas de LLM. L'import des recettes r
 - Sur Android, une fois l'appli ajoutée à l'écran d'accueil, « Partager → Tes menus » depuis une page de recette lance l'import.
 - Sécurité : seules les adresses publiques http(s) sont acceptées (pas d'accès au réseau interne du serveur), 12 s et 4 Mo maximum.
 
+## Planning
+
+- **Génération** (code déterministe, sans IA) : le soir on cuisine pour plusieurs repas (réglage « portions par recette ») et le midi suivant mange les restes ; le premier midi est cuisiné pour le foyer. Pas de recette répétée sur la période, celles de la semaine précédente évitées, alternance viande / poisson / végé (d'après les tags), préférence pour les recettes qui partagent des ingrédients. Plusieurs tirages sont comparés et le meilleur est gardé.
+- **Contraintes** à la création : temps maximum par jour, recettes à inclure, uniquement des plats congelables, tags à éviter.
+- **Édition** d'un repas : autre recette au hasard, choix dans la bibliothèque, échange avec un autre repas, restes d'un repas précédent, repas extérieur, portions ; « Tout relancer » pour la semaine entière.
+- **Historique** des plannings ; l'onglet Planning ouvre celui en cours.
+- Les dates suivent le fuseau `APP_TIMEZONE` (défaut `Europe/Paris`).
+
 ## Stack
 
 Next.js 16 (App Router) + TypeScript, Drizzle ORM sur SQLite (`better-sqlite3`), Tailwind CSS 4, zod, Vitest.
@@ -76,6 +84,7 @@ Le port (`PORT`) est fourni par Railway et le cookie de session passe automatiqu
 | `SESSION_SECRET` | Secret de signature du cookie (optionnel, généré sinon) |
 | `DATA_DIR` | Dossier des données (défaut : volume Railway, sinon `./data`) |
 | `IMPORT_ALLOW_PRIVATE` | `1` autorise l'import depuis des adresses locales (tests uniquement, jamais en production) |
+| `APP_TIMEZONE` | Fuseau horaire pour « aujourd'hui » (défaut `Europe/Paris`) |
 | `COOKIE_SECURE` | Force `true`/`false` ; par défaut détecté selon HTTPS |
 
 ## Avancement
@@ -84,7 +93,7 @@ Le port (`PORT`) est fourni par Railway et le cookie de session passe automatiqu
 2. ✅ CRUD recettes manuel + bibliothèque (recherche, filtres, portions)
 3. ✅ Import par lien (JSON-LD, puis structure HTML) et par texte collé
 4. ✅ Import par photo (OCR local Tesseract) + écran de relecture
-5. ⬜ Planning (génération + édition)
+5. ✅ Planning (génération + édition + historique)
 6. ⬜ Liste de courses (agrégation + conversion + rayons)
 7. ⬜ Batch cooking (fiche + mode cuisine)
 8. ⬜ Finitions mobile, tests
