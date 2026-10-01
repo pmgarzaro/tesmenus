@@ -232,7 +232,7 @@ export function RecipeForm({
 
   return (
     <form onSubmit={submit} className="space-y-6 pb-20">
-      <section className="space-y-3 rounded-2xl bg-white p-4 shadow-sm">
+      <section className="space-y-3 paper p-4">
         <input
           value={title}
           onChange={(e) => {
@@ -332,7 +332,7 @@ export function RecipeForm({
         </div>
       </section>
 
-      <section className="space-y-3 rounded-2xl bg-white p-4 shadow-sm">
+      <section className="space-y-3 paper p-4">
         <h2 className="font-semibold">Ingrédients</h2>
         <ul className="space-y-3">
           {ings.map((r, i) => (
@@ -436,7 +436,7 @@ export function RecipeForm({
         )}
       </section>
 
-      <section className="space-y-3 rounded-2xl bg-white p-4 shadow-sm">
+      <section className="space-y-3 paper p-4">
         <h2 className="font-semibold">Étapes</h2>
         <datalist id="equipment-list">
           {EQUIPMENT_SUGGESTIONS.map((e) => <option key={e} value={e} />)}
@@ -545,7 +545,7 @@ export function RecipeForm({
         )}
       </section>
 
-      <section className="space-y-3 rounded-2xl bg-white p-4 shadow-sm">
+      <section className="space-y-3 paper p-4">
         <label className="block text-sm text-stone-600">
           Source (URL)
           <input value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} type="url" inputMode="url" placeholder="https://…" className={input} />
@@ -562,7 +562,7 @@ export function RecipeForm({
           <Link href={cancelHref ?? (recipeId ? `/recettes/${recipeId}` : "/recettes")} className="px-3 py-2 text-stone-600">
             Annuler
           </Link>
-          <button disabled={pending} className="rounded-xl bg-brand-600 px-5 py-2 font-semibold text-white disabled:opacity-60">
+          <button disabled={pending} className="btn-primary px-5 py-2 font-semibold text-white disabled:opacity-60">
             {pending ? "Enregistrement…" : "Enregistrer"}
           </button>
         </div>

@@ -55,7 +55,7 @@ export function ImportFlow({ mode, allTags, initialUrl }: { mode: Mode; allTags:
         e.preventDefault();
         if (value.trim()) run(value);
       }}
-      className="space-y-4 rounded-2xl bg-white p-4 shadow-sm"
+      className="space-y-4 paper p-4"
     >
       {mode === "url" ? (
         <label className="block space-y-2">
@@ -105,7 +105,7 @@ export function ImportFlow({ mode, allTags, initialUrl }: { mode: Mode; allTags:
 
       <button
         disabled={pending}
-        className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 py-3 font-semibold text-white disabled:opacity-70"
+        className="flex w-full items-center justify-center gap-2 btn-primary py-3 font-semibold text-white disabled:opacity-70"
       >
         {pending ? (
           <>

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useOptimistic, useState, useTransition } from "react";
 import { type ShopAction, shopAction } from "@/app/(app)/courses/actions";
 import { AISLE_LABELS } from "@/lib/labels";
+import { noteAt } from "@/lib/notes";
 import { AISLE_ORDER, capitalize, toText } from "@/lib/shopping/aggregate";
 import type { ListItem, ManualItem } from "@/lib/shopping/repo";
 
@@ -96,7 +97,7 @@ export function ShoppingList({ planId, title, items, manual }: { planId: number;
           placeholder="Ajouter un article (papier toilette, 1 l de lait…)"
           className="min-w-0 flex-1 rounded-xl border border-stone-300 bg-white px-3 py-2.5"
         />
-        <button className="rounded-xl bg-brand-600 px-4 font-semibold text-white" aria-label="Ajouter">+</button>
+        <button className="btn-primary px-4 font-semibold text-white" aria-label="Ajouter">+</button>
       </form>
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
@@ -132,13 +133,13 @@ export function ShoppingList({ planId, title, items, manual }: { planId: number;
         </p>
       )}
 
-      {AISLE_ORDER.map((aisle) => {
+      {AISLE_ORDER.map((aisle, aisleIndex) => {
         const inAisle = rows.filter((r) => r.aisle === aisle).sort((a, b) => Number(a.checked) - Number(b.checked));
         if (inAisle.length === 0) return null;
         return (
-          <section key={aisle} className="rounded-2xl bg-white p-3 shadow-sm">
-            <h2 className="mb-1 px-1 text-sm font-semibold uppercase tracking-wide text-stone-500">{AISLE_LABELS[aisle]}</h2>
-            <ul className="divide-y divide-stone-100">
+          <section key={aisle} className={`paper paper-notepad magnet ${noteAt(aisleIndex).magnet} px-3 pb-2 pt-4`}>
+            <h2 className="px-1 text-brand-700">{AISLE_LABELS[aisle]}</h2>
+            <ul className="divide-y divide-dashed divide-stone-200">
               {inAisle.map((r) => {
                 const key = r.kind === "item" ? `i${r.item.ingredientId}` : `m${r.item.id}`;
                 const toggle = () =>
@@ -149,11 +150,11 @@ export function ShoppingList({ planId, title, items, manual }: { planId: number;
                   );
                 return (
                   <li key={key} className="flex items-center gap-1">
-                    <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 px-1 py-2.5">
+                    <label className="flex min-h-10 min-w-0 flex-1 cursor-pointer items-center gap-3 px-1 py-1">
                       <input type="checkbox" checked={r.checked} onChange={toggle} className="size-6 shrink-0 accent-brand-600" />
                       <span className={`min-w-0 flex-1 ${r.checked ? "text-stone-400 line-through" : ""}`}>
                         <span className="flex items-baseline justify-between gap-2">
-                          <span className="truncate">{capitalize(r.kind === "item" ? r.item.name : r.item.label)}</span>
+                          <span className="truncate font-hand text-[1.45rem] font-semibold leading-tight">{capitalize(r.kind === "item" ? r.item.name : r.item.label)}</span>
                           {r.kind === "item" && <span className="shrink-0 text-sm font-medium">{r.item.amount}</span>}
                         </span>
                         {r.kind === "item" && !r.checked && (

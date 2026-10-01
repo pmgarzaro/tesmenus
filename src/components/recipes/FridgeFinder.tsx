@@ -21,7 +21,7 @@ export function FridgeFinder({ recipes, suggestions, pantry }: { recipes: Fridge
 
   return (
     <div className="space-y-4">
-      <section className="space-y-2 rounded-2xl bg-white p-4 shadow-sm">
+      <section className="space-y-2 paper p-4">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -36,7 +36,7 @@ export function FridgeFinder({ recipes, suggestions, pantry }: { recipes: Fridge
             autoFocus
             className="min-w-0 flex-1 rounded-xl border border-stone-300 bg-white px-3 py-2.5"
           />
-          <button className="rounded-xl bg-brand-600 px-4 font-semibold text-white" aria-label="Ajouter">+</button>
+          <button className="btn-primary px-4 font-semibold text-white" aria-label="Ajouter">+</button>
         </form>
         {hints.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
@@ -66,7 +66,7 @@ export function FridgeFinder({ recipes, suggestions, pantry }: { recipes: Fridge
       <ul className="space-y-2">
         {results.map((r) => (
           <li key={r.id}>
-            <Link href={`/recettes/${r.id}`} className="block rounded-2xl bg-white p-3 shadow-sm">
+            <Link href={`/recettes/${r.id}`} className="block paper p-3">
               <span className="flex items-center justify-between gap-2">
                 <span className="font-medium">{r.title}</span>
                 <span

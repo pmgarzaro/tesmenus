@@ -17,7 +17,7 @@ const STORAGE = {
   attention: { label: "Attention", tone: "bg-red-100 text-red-800" },
 };
 
-const box = "rounded-2xl bg-white p-4 shadow-sm print:break-inside-avoid print:shadow-none print:border print:border-stone-300";
+const box = "paper p-4 print:break-inside-avoid print:border print:border-stone-300";
 
 export default async function BatchSheetPage({ params }: { params: Promise<{ id: string }> }) {
   const { householdId } = await requireUser();
@@ -32,7 +32,7 @@ export default async function BatchSheetPage({ params }: { params: Promise<{ id:
     <article className="space-y-4">
       <Link href="/batch" className="text-sm text-stone-500 print:hidden">← Batch cooking</Link>
       <header className="space-y-2">
-        <h1 className="text-2xl font-bold">Session du {longDate(s.sessionDate)}</h1>
+        <h1 className="font-hand text-[2.4rem] font-bold leading-none">Session du {longDate(s.sessionDate)}</h1>
         <ul className="flex flex-wrap gap-1.5">
           {s.dishes.map((d) => (
             <li key={d.key} className="flex items-center gap-1.5 rounded-full bg-stone-100 px-2.5 py-0.5 text-sm">

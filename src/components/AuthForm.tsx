@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 
 export const inputClass =
-  "w-full rounded-xl border border-stone-300 bg-white px-4 py-3 text-lg outline-none focus:border-brand-500";
+  "w-full rounded-lg border border-stone-300/80 bg-white/90 px-4 py-3 text-lg outline-none focus:border-brand-500";
 
 export type AuthState = { error: string; values: Record<string, string> } | null;
 type Action = (prev: AuthState, form: FormData) => Promise<AuthState>;
@@ -52,7 +52,7 @@ export function AuthForm({
       {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
       <button
         disabled={pending}
-        className="w-full rounded-xl bg-brand-600 py-3 text-lg font-semibold text-white disabled:opacity-60"
+        className="w-full btn-primary py-3 text-lg font-semibold text-white disabled:opacity-60"
       >
         {pending ? pendingLabel : submitLabel}
       </button>

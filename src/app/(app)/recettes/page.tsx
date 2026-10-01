@@ -6,6 +6,7 @@ import { LibraryFilters } from "@/components/recipes/LibraryFilters";
 import { MEAL_TYPES } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { formatMinutes } from "@/lib/labels";
+import { noteForTags, tiltAt } from "@/lib/notes";
 import { listRecipeSummaries } from "@/lib/recipes/repo";
 import { type RecipeFilters, filterRecipes, tagCounts, totalMinutes } from "@/lib/recipes/search";
 
@@ -42,7 +43,7 @@ export default async function RecipesPage({ searchParams }: { searchParams: Prom
         }
       />
       {all.length === 0 ? (
-        <div className="space-y-3 rounded-2xl border border-dashed border-stone-300 p-6 text-center text-stone-500">
+        <div className="postit note-yellow magnet magnet-red tilt-l space-y-3 p-6 pt-7 text-center text-stone-700">
           <p>Ta bibliothèque est vide.</p>
           <p>
             Ajoute une recette avec le bouton <strong>+</strong>, ou charge les exemples depuis les{" "}
@@ -57,21 +58,27 @@ export default async function RecipesPage({ searchParams }: { searchParams: Prom
           {recipes.length === 0 ? (
             <p className="p-6 text-center text-stone-500">Aucune recette ne correspond.</p>
           ) : (
-            <ul className="space-y-2">
-              {recipes.map((r) => (
-                <li key={r.id}>
-                  <Link href={`/recettes/${r.id}`} className="block rounded-2xl bg-white px-4 py-3 shadow-sm active:bg-stone-50">
-                    <div className="flex items-baseline justify-between gap-3">
-                      <span className="font-medium">{r.title}</span>
-                      <span className="shrink-0 text-sm text-stone-500">
-                        {formatMinutes(totalMinutes(r))}
-                        {r.freezable && " · ❄️"}
+            <ul className="grid grid-cols-2 gap-x-3 gap-y-5 pt-2 sm:grid-cols-3">
+              {recipes.map((r, i) => {
+                const style = noteForTags(r.tags, r.mealType);
+                return (
+                  <li key={r.id} className="min-w-0">
+                    <Link
+                      href={`/recettes/${r.id}`}
+                      className={`postit magnet ${style.note} ${style.magnet} ${tiltAt(i)} flex min-h-28 flex-col justify-between gap-2 px-3 pb-2.5 pt-4 transition-transform active:scale-[0.98]`}
+                    >
+                      <span className="font-hand text-[1.45rem] font-bold leading-[1.05] [overflow-wrap:anywhere]">{r.title}</span>
+                      <span className="flex items-end justify-between gap-1 text-xs text-stone-600">
+                        <span className="min-w-0 truncate">{r.tags.slice(0, 2).join(" · ")}</span>
+                        <span className="shrink-0 font-medium">
+                          {formatMinutes(totalMinutes(r))}
+                          {r.freezable && " ❄️"}
+                        </span>
                       </span>
-                    </div>
-                    {r.tags.length > 0 && <p className="mt-0.5 text-xs text-stone-500">{r.tags.join(" · ")}</p>}
-                  </Link>
-                </li>
-              ))}
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </>

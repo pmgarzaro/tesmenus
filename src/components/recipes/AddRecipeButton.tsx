@@ -18,7 +18,7 @@ export function AddRecipeButton() {
       <button
         onClick={() => setOpen(true)}
         aria-label="Ajouter une recette"
-        className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-4 z-20 flex size-14 items-center justify-center rounded-full bg-brand-600 text-3xl text-white shadow-lg sm:right-[max(1rem,calc(50vw-24rem+1rem))]"
+        className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-4 z-20 flex size-14 items-center justify-center btn-primary text-3xl sm:right-[max(1rem,calc(50vw-24rem+1rem))]"
       >
         +
       </button>

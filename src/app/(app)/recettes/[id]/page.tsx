@@ -27,7 +27,7 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
       </div>
 
       <header className="space-y-2">
-        <h1 className="text-2xl font-bold leading-tight">{r.title}</h1>
+        <h1 className="font-hand text-[2.6rem] font-bold leading-[0.95]">{r.title}</h1>
         {r.description && <p className="text-stone-600">{r.description}</p>}
         <div className="flex flex-wrap gap-1.5">
           <span className="rounded-full bg-stone-200 px-2.5 py-0.5 text-xs">{MEAL_TYPE_LABELS[r.mealType]}</span>
@@ -41,7 +41,7 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
 
       {(r.mealType === "plat" || r.mealType === "autre") && <AddToPlanButton recipeId={r.id} plans={openPlans(householdId)} />}
 
-      <dl className="grid grid-cols-3 gap-2 rounded-2xl bg-white p-3 text-center shadow-sm">
+      <dl className="grid grid-cols-3 gap-2 paper p-3 text-center">
         {[
           ["Préparation", formatMinutes(r.prepMinutes) || "—"],
           ["Cuisson", formatMinutes(r.cookMinutes) || "—"],
@@ -65,7 +65,7 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
         ingredients={r.ingredients.map((i) => ({ quantity: i.quantity, unit: i.unit, label: i.label, optional: i.optional }))}
       />
 
-      <section className="rounded-2xl bg-white p-4 shadow-sm">
+      <section className="paper p-4">
         <h2 className="mb-3 font-semibold">Étapes</h2>
         {r.steps.length === 0 ? (
           <p className="text-sm text-stone-500">Aucune étape.</p>
@@ -95,7 +95,7 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
       </section>
 
       {r.imagePaths.length > 0 && (
-        <section className="rounded-2xl bg-white p-4 shadow-sm">
+        <section className="paper p-4">
           <h2 className="mb-3 font-semibold">Recette originale</h2>
           <div className="flex gap-2 overflow-x-auto">
             {r.imagePaths.map((p, i) => (
@@ -109,7 +109,7 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
       )}
 
       {(r.notes || r.sourceUrl) && (
-        <section className="space-y-2 rounded-2xl bg-white p-4 text-sm shadow-sm">
+        <section className="space-y-2 paper p-4 text-sm">
           {r.notes && <p className="whitespace-pre-line">{r.notes}</p>}
           {r.sourceUrl && (
             <a href={r.sourceUrl} target="_blank" rel="noreferrer" className="block truncate text-brand-700 underline">

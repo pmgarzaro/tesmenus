@@ -30,7 +30,7 @@ export default async function SettingsPage() {
       <PageHeader title="Réglages" />
       <SettingsForm settings={settings} />
 
-      <section className="mt-6 space-y-3 rounded-2xl bg-white p-4 shadow-sm">
+      <section className="mt-6 space-y-3 paper p-4">
         <h2 className="font-semibold">✨ Intelligence artificielle</h2>
         {aiConfigured() ? (
           <>
@@ -51,7 +51,7 @@ export default async function SettingsPage() {
         )}
       </section>
 
-      <section className="mt-6 space-y-4 rounded-2xl bg-white p-4 shadow-sm">
+      <section className="mt-6 space-y-4 paper p-4">
         <h2 className="font-semibold">Mon foyer</h2>
         <HouseholdNameForm name={household.name} />
         <p className="text-sm text-stone-500">Membres (données partagées entre eux) :</p>
@@ -67,7 +67,7 @@ export default async function SettingsPage() {
         <InviteButtons />
       </section>
 
-      <section className="mt-6 space-y-4 rounded-2xl bg-white p-4 shadow-sm">
+      <section className="mt-6 space-y-4 paper p-4">
         <h2 className="font-semibold">Mon compte</h2>
         <PasswordForm />
         <form action="/api/logout" method="post">
@@ -75,7 +75,7 @@ export default async function SettingsPage() {
         </form>
       </section>
 
-      <section className="mt-6 space-y-3 rounded-2xl bg-white p-4 shadow-sm">
+      <section className="mt-6 space-y-3 paper p-4">
         <h2 className="font-semibold">Données</h2>
         <a href="/api/export" className="block text-brand-600 underline">
           Exporter toute la base (JSON)

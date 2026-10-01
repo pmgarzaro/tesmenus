@@ -8,7 +8,7 @@ import { formatMinutes } from "@/lib/labels";
 
 type Recipe = { id: number; title: string; totalMinutes: number };
 const MAX_TIMES = [15, 20, 30, 45, 60, 90];
-const box = "space-y-3 rounded-2xl bg-white p-4 shadow-sm";
+const box = "space-y-3 paper p-4";
 const field = "rounded-lg border border-stone-300 bg-white px-3 py-2";
 
 export function NewPlanForm({
@@ -228,7 +228,7 @@ export function NewPlanForm({
       </section>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
-      <button disabled={pending || slots.length === 0} className="w-full rounded-xl bg-brand-600 py-3 font-semibold text-white disabled:opacity-60">
+      <button disabled={pending || slots.length === 0} className="w-full btn-primary py-3 font-semibold text-white disabled:opacity-60">
         {pending
           ? request.trim()
             ? "L'IA lit ta demande…"

@@ -14,7 +14,7 @@ export default async function BatchPage() {
     <>
       <PageHeader
         title="Batch cooking"
-        action={<Link href="/batch/nouveau" className="rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white">Nouvelle session</Link>}
+        action={<Link href="/batch/nouveau" className="btn-primary px-4 py-2 text-sm font-semibold text-white">Nouvelle session</Link>}
       />
       {sessions.length === 0 ? (
         <div className="space-y-3 rounded-2xl border border-dashed border-stone-300 p-6 text-center text-stone-600">
@@ -22,7 +22,7 @@ export default async function BatchPage() {
           <p className="text-sm text-stone-500">
             L&apos;appli regroupe les découpes, lance les cuissons longues en premier et te dit comment conserver chaque plat.
           </p>
-          <Link href="/batch/nouveau" className="inline-block rounded-xl bg-brand-600 px-5 py-3 font-semibold text-white">
+          <Link href="/batch/nouveau" className="inline-block btn-primary px-5 py-3 font-semibold text-white">
             Préparer une session
           </Link>
         </div>
@@ -30,7 +30,7 @@ export default async function BatchPage() {
         <ul className="space-y-2">
           {sessions.map((s) => (
             <li key={s.id}>
-              <Link href={`/batch/${s.id}`} className="block rounded-2xl bg-white px-4 py-3 shadow-sm">
+              <Link href={`/batch/${s.id}`} className="block paper px-4 py-3">
                 <span className="flex justify-between gap-2">
                   <span className="font-medium">Session du {longDate(s.sheet.sessionDate)}</span>
                   <span className="text-sm text-stone-500">{formatMinutes(s.sheet.totalMinutes)}</span>

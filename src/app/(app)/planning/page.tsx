@@ -15,7 +15,7 @@ export default async function PlanningPage() {
       <PageHeader title="Planning" />
       <div className="space-y-4 rounded-2xl border border-dashed border-stone-300 p-6 text-center">
         <p className="text-stone-600">Aucun planning pour l&apos;instant.</p>
-        <Link href="/planning/nouveau" className="inline-block rounded-xl bg-brand-600 px-5 py-3 font-semibold text-white">
+        <Link href="/planning/nouveau" className="inline-block btn-primary px-5 py-3 font-semibold text-white">
           Créer le planning de la semaine
         </Link>
       </div>

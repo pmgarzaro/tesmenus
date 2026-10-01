@@ -14,7 +14,7 @@ export default async function LoginPage({
   const { next } = await searchParams;
   return (
     <>
-      <p className="mb-8 text-stone-500">Connecte-toi pour accéder aux recettes du foyer.</p>
+      <p className="mb-5 text-stone-700">Connecte-toi pour accéder aux recettes du foyer.</p>
       <AuthForm
         action={login}
         submitLabel="Se connecter"

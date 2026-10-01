@@ -127,7 +127,7 @@ export function CookMode({ id, sheet }: { id: number; sheet: BatchSheet }) {
   if (!step) return null;
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-2xl flex-col bg-stone-50 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3">
+    <div className="mx-auto flex min-h-dvh max-w-2xl flex-col px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3">
       <header className="mb-3 flex items-center justify-between text-sm text-stone-500">
         <Link href={`/batch/${id}`} className="rounded-lg px-2 py-1">✕ Quitter</Link>
         <span>
@@ -166,7 +166,7 @@ export function CookMode({ id, sheet }: { id: number; sheet: BatchSheet }) {
       )}
 
       <main className="flex flex-1 flex-col justify-center gap-5 py-4">
-        <p className="flex items-center gap-2 text-lg text-stone-600">
+        <p className="flex items-center gap-2 font-hand text-3xl font-bold text-stone-600">
           <span className={`size-3.5 rounded-full ${color.get(step.recipeKey)}`} />
           {step.recipeTitle}
         </p>
@@ -204,7 +204,7 @@ export function CookMode({ id, sheet }: { id: number; sheet: BatchSheet }) {
           ← Précédent
         </button>
         {index < steps.length - 1 ? (
-          <button onClick={() => setIndex(index + 1)} className="rounded-2xl bg-brand-600 py-4 text-lg font-semibold text-white">
+          <button onClick={() => setIndex(index + 1)} className="btn-primary py-4 text-lg font-semibold text-white">
             Suivant →
           </button>
         ) : (

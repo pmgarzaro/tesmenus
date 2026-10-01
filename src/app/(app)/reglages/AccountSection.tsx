@@ -27,7 +27,7 @@ export function InviteButtons() {
         <button
           disabled={pending}
           onClick={() => create("join")}
-          className="rounded-xl bg-brand-600 px-4 py-2 font-semibold text-white disabled:opacity-60"
+          className="btn-primary px-4 py-2 font-semibold text-white disabled:opacity-60"
         >
           Inviter dans mon foyer
         </button>

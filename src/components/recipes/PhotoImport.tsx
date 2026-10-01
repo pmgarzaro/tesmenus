@@ -133,7 +133,7 @@ export function PhotoImport({ allTags }: { allTags: string[] }) {
     status.step === "ocr" ? Math.round(((status.done + 0.5) / status.total) * 100) : status.step === "upload" ? 5 : 0;
 
   return (
-    <div className="space-y-4 rounded-2xl bg-white p-4 shadow-sm">
+    <div className="space-y-4 paper p-4">
       <p className="text-sm text-stone-600">
         Photographie la recette bien à plat, avec une bonne lumière et sans reflet. Une photo par page, dans
         l&apos;ordre.
@@ -201,7 +201,7 @@ export function PhotoImport({ allTags }: { allTags: string[] }) {
         type="button"
         disabled={pages.length === 0 || busy}
         onClick={read}
-        className="w-full rounded-xl bg-brand-600 py-3 font-semibold text-white disabled:opacity-50"
+        className="w-full btn-primary py-3 font-semibold text-white disabled:opacity-50"
       >
         {busy ? "Lecture en cours…" : `Lire la recette${pages.length > 1 ? ` (${pages.length} pages)` : ""}`}
       </button>

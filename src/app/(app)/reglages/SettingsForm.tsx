@@ -9,7 +9,7 @@ const field = "w-20 rounded-lg border border-stone-300 bg-white px-3 py-2 text-r
 export function SettingsForm({ settings }: { settings: Settings }) {
   const [message, action, pending] = useActionState(updateSettings, null);
   return (
-    <form action={action} className="space-y-4 rounded-2xl bg-white p-4 shadow-sm">
+    <form action={action} className="space-y-4 paper p-4">
       <label className="flex items-center justify-between gap-4">
         <span>Nombre de jours par planning</span>
         <input type="number" name="defaultDays" min={1} max={14} defaultValue={settings.defaultDays} className={field} />
@@ -38,7 +38,7 @@ export function SettingsForm({ settings }: { settings: Settings }) {
         <input type="checkbox" name="dinnerCoversNextLunch" defaultChecked={settings.dinnerCoversNextLunch} className="size-5 accent-brand-600" />
       </label>
       <div className="flex items-center gap-3">
-        <button disabled={pending} className="rounded-xl bg-brand-600 px-5 py-2.5 font-semibold text-white disabled:opacity-60">
+        <button disabled={pending} className="btn-primary px-5 py-2.5 font-semibold text-white disabled:opacity-60">
           Enregistrer
         </button>
         {message && <span className="text-sm text-stone-600">{message}</span>}

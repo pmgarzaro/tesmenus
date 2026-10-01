@@ -1,18 +1,126 @@
 @import "tailwindcss";
+@import "@fontsource-variable/work-sans";
+@import "@fontsource/caveat/600.css";
+@import "@fontsource/caveat/700.css";
 
+/* Direction artistique « porte de frigo » : porte émaillée blanche, recettes en
+   post-it tenues par des aimants, titres écrits à la main, accent tomate. */
 @theme {
-  --color-brand-50: #fff7ed;
-  --color-brand-100: #ffedd5;
-  --color-brand-500: #f97316;
-  --color-brand-600: #ea580c;
-  --color-brand-700: #c2410c;
+  --font-sans: "Work Sans Variable", "Work Sans", system-ui, sans-serif;
+  --font-hand: "Caveat", "Segoe Print", "Bradley Hand", cursive;
+
+  --color-brand-50: #fff1ec;
+  --color-brand-100: #ffe1d7;
+  --color-brand-200: #ffc5b2;
+  --color-brand-500: #ff6b4a;
+  --color-brand-600: #e44d2a;
+  --color-brand-700: #c03c1c;
+  --color-brand-800: #9a2f15;
+
+  --color-door: #f3f6f7;
+  --color-ink: #273033;
+  --color-note-yellow: #fff4a8;
+  --color-note-mint: #c9f0e1;
+  --color-note-peach: #ffd9cf;
+  --color-note-blue: #d8e6ff;
+  --color-note-lilac: #eadcff;
+  --color-magnet-red: #ff6b4a;
+  --color-magnet-green: #2fb38a;
+  --color-magnet-blue: #3d7be0;
+  --color-magnet-yellow: #f2b705;
+  --color-magnet-violet: #8a5cf6;
 }
 
 html {
   -webkit-tap-highlight-color: transparent;
 }
 body {
-  @apply bg-stone-50 text-stone-900;
+  color: var(--color-ink);
+  /* Enamel door: almost white, a hint of cold light from the top. */
+  background: linear-gradient(180deg, #fdfefe 0%, var(--color-door) 45%, #e8eef0 100%) fixed;
+  min-height: 100dvh;
+}
+
+@layer components {
+  /* A sheet of paper stuck on the door. */
+  .paper {
+    position: relative;
+    background: #fff;
+    border-radius: 6px;
+    box-shadow: 0 1px 0 rgb(30 40 45 / 0.05), 0 10px 18px -10px rgb(30 40 45 / 0.28);
+  }
+  /* Notebook lines (shopping list, ingredients). */
+  .paper-lined {
+    background-image: repeating-linear-gradient(to bottom, transparent 0 39px, #e2eaef 39px 40px);
+  }
+  /* Notepad: red margin line on the left. */
+  .paper-notepad {
+    background-image: linear-gradient(90deg, transparent 0 40px, #ffb7a6 40px 41px, transparent 41px);
+  }
+  /* Post-it: square corners, a fold shadow at the bottom. */
+  .postit {
+    position: relative;
+    border-radius: 2px 2px 6px 2px;
+    box-shadow: 0 1px 0 rgb(30 40 45 / 0.06), 0 12px 16px -12px rgb(30 40 45 / 0.45);
+  }
+  .note-yellow { background: var(--color-note-yellow); }
+  .note-mint { background: var(--color-note-mint); }
+  .note-peach { background: var(--color-note-peach); }
+  .note-blue { background: var(--color-note-blue); }
+  .note-lilac { background: var(--color-note-lilac); }
+  .tilt-l { rotate: -1.2deg; }
+  .tilt-r { rotate: 1deg; }
+
+  /* Round fridge magnet pinning a note (colour through --magnet). */
+  .magnet::before {
+    content: "";
+    position: absolute;
+    top: -9px;
+    left: 50%;
+    translate: -50% 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--magnet, var(--color-magnet-red));
+    box-shadow: inset -3px -3px 0 rgb(0 0 0 / 0.18), inset 2px 2px 0 rgb(255 255 255 / 0.35), 0 2px 3px rgb(0 0 0 / 0.25);
+    z-index: 1;
+  }
+  .magnet-red { --magnet: var(--color-magnet-red); }
+  .magnet-green { --magnet: var(--color-magnet-green); }
+  .magnet-blue { --magnet: var(--color-magnet-blue); }
+  .magnet-yellow { --magnet: var(--color-magnet-yellow); }
+  .magnet-violet { --magnet: var(--color-magnet-violet); }
+
+  /* Main action: a tomato button with a little relief, like a magnet. */
+  .btn-primary {
+    border-radius: 999px;
+    background: var(--color-brand-600);
+    color: #fff;
+    font-weight: 600;
+    box-shadow: 0 3px 0 var(--color-brand-800);
+    transition: translate 80ms, box-shadow 80ms;
+  }
+  .btn-primary:active:not(:disabled) {
+    translate: 0 2px;
+    box-shadow: 0 1px 0 var(--color-brand-800);
+  }
+
+  .font-hand {
+    font-family: var(--font-hand);
+    letter-spacing: 0.01em;
+  }
+  /* Section titles on sheets are handwritten. */
+  .paper h2,
+  .postit h2 {
+    font-family: var(--font-hand);
+    font-size: 1.65rem;
+    font-weight: 700;
+    line-height: 1.1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-primary { transition: none; }
 }
 
 /* iOS Safari zooms into any field under 16px when it gets focus. */
@@ -27,5 +135,13 @@ body {
 @media print {
   body {
     background: white;
+  }
+  .paper,
+  .postit {
+    box-shadow: none;
+    rotate: 0deg;
+  }
+  .magnet::before {
+    display: none;
   }
 }
