@@ -39,6 +39,13 @@ Tout tourne en local, **sans API payante** : pas de LLM. L'import des recettes r
 - **Conversions** : g/kg et ml/cl/l additionnés ; cuillères converties en grammes pour les ingrédients courants (sucre, farine, beurre…), en volume pour les liquides ; unités incompatibles affichées côte à côte (« 400 g + 2 boîtes »). Quantités arrondies vers le haut (on n'achète pas 1,5 oignon).
 - Regroupée **par rayon**, cases à cocher partagées entre téléphones (rafraîchie au retour dans l'appli), articles ajoutés à la main, « déjà au placard » (cette semaine) ou « toujours au placard » (sel, poivre, eau par défaut), « Tout décocher », **partage / copie en texte**.
 
+## Batch cooking
+
+- **Session** : 2 plats ou plus, choisis dans un planning (avec leurs portions et leurs jours de consommation) et/ou dans la bibliothèque.
+- **Ordonnancement** (code, sans IA) : simulation d'une personne seule en cuisine. Les tâches actives (découper, faire revenir) occupent le cuisinier ; les cuissons longues, le four et les repos tournent en parallèle. Priorité à la chaîne la plus longue (les cuissons longues partent d'abord), four partagé à une seule température (2 plats max, préchauffage commun), 3 feux, découpes « propre avant sale » (légumes avant viande crue). Vérification qu'aucune étape n'est oubliée.
+- **Fiche** : mise en place regroupée par ingrédient, ingrédients de la session, déroulé horodaté, durée batch vs séparée, conservation (frigo plafonné prudemment : poisson 2 j, viande 3 j, autres 4 j ; congélation des portions trop lointaines si le plat s'y prête, avec rappel de décongélation la veille ; alerte sinon), réchauffage et ordre de consommation. Imprimable.
+- **Mode cuisine** : une étape à la fois en grand, minuteurs multiples qui continuent en arrière-plan (vibration + bip), écran maintenu allumé (Wake Lock), progression conservée.
+
 ## Stack
 
 Next.js 16 (App Router) + TypeScript, Drizzle ORM sur SQLite (`better-sqlite3`), Tailwind CSS 4, zod, Vitest.
@@ -102,5 +109,5 @@ Le port (`PORT`) est fourni par Railway et le cookie de session passe automatiqu
 4. ✅ Import par photo (OCR local Tesseract) + écran de relecture
 5. ✅ Planning (génération + édition + historique)
 6. ✅ Liste de courses (agrégation + conversion + rayons)
-7. ⬜ Batch cooking (fiche + mode cuisine)
+7. ✅ Batch cooking (fiche + mode cuisine)
 8. ⬜ Finitions mobile, tests

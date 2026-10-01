@@ -77,6 +77,9 @@ export default async function PlanPage({
       >
         🛒 Liste de courses de ce planning
       </Link>
+      <Link href={`/batch/nouveau?plan=${plan.id}`} className="mt-2 block rounded-2xl border border-brand-600 p-3 text-center font-semibold text-brand-700">
+        🥘 Préparer en batch cooking
+      </Link>
     </>
   );
 }

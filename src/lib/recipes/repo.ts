@@ -131,6 +131,7 @@ export function getRecipe(householdId: number, id: number) {
   if (!recipe) return null;
   const ingredients = db
     .select({
+      ingredientId: schema.recipeIngredients.ingredientId,
       quantity: schema.recipeIngredients.quantity,
       unit: schema.recipeIngredients.unit,
       label: schema.recipeIngredients.originalLabel,
