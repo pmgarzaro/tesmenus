@@ -36,7 +36,17 @@ docker compose up -d --build
 - La base SQLite et les images uploadées sont dans `./data` (volume monté).
 - **Sauvegarde** : copier le dossier `data/`, ou utiliser *Réglages → Exporter toute la base (JSON)* (`/api/export`).
 - Les recettes d'exemple peuvent être chargées depuis *Réglages*.
-- Derrière un reverse proxy HTTPS, passer `COOKIE_SECURE=true`.
+
+## Déploiement sur Railway
+
+Le dépôt contient un `railway.json` : Railway construit le `Dockerfile` et vérifie `/api/health`.
+
+1. **New Project → Deploy from GitHub repo** → choisir ce dépôt.
+2. **Variables** : ajouter `APP_PASSWORD` (et idéalement `SESSION_SECRET`, une longue chaîne aléatoire).
+3. **Volume** (indispensable, sinon la base est effacée à chaque déploiement) : clic droit sur le service → *Attach volume*, point de montage `/app/data`. L'appli détecte automatiquement le volume via `RAILWAY_VOLUME_MOUNT_PATH`.
+4. **Settings → Networking → Generate Domain** pour obtenir l'URL publique.
+
+Le port (`PORT`) est fourni par Railway et le cookie de session passe automatiquement en `Secure` en HTTPS.
 
 ## Variables d'environnement
 
@@ -44,8 +54,8 @@ docker compose up -d --build
 |---|---|
 | `APP_PASSWORD` | Mot de passe partagé (obligatoire) |
 | `SESSION_SECRET` | Secret de signature du cookie (par défaut : `APP_PASSWORD`) |
-| `DATA_DIR` | Dossier des données (défaut `./data`) |
-| `COOKIE_SECURE` | `true` pour un cookie `Secure` (HTTPS) |
+| `DATA_DIR` | Dossier des données (défaut : volume Railway, sinon `./data`) |
+| `COOKIE_SECURE` | Force `true`/`false` ; par défaut détecté selon HTTPS |
 
 ## Avancement
 

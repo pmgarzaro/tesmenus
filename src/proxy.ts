@@ -2,6 +2,11 @@ import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE, verifySessionToken } from "@/lib/session";
 
 export async function proxy(request: NextRequest) {
+  if (!process.env.APP_PASSWORD) {
+    return new NextResponse("Configuration manquante : définir la variable APP_PASSWORD.", {
+      status: 500,
+    });
+  }
   const ok = await verifySessionToken(request.cookies.get(SESSION_COOKIE)?.value);
   if (ok) return NextResponse.next();
   if (request.nextUrl.pathname.startsWith("/api/")) {

@@ -17,14 +17,15 @@ WORKDIR /app
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \
-    HOSTNAME=0.0.0.0 \
-    DATA_DIR=/app/data \
     MIGRATIONS_DIR=/app/drizzle
 COPY --from=build /app/.next/standalone ./
 COPY --from=build /app/.next/static ./.next/static
 COPY --from=build /app/public ./public
 COPY --from=build /app/drizzle ./drizzle
+# No VOLUME instruction: Railway rejects it. Mount a volume on /app/data
+# (docker-compose) or attach a Railway volume (its path is picked up via
+# RAILWAY_VOLUME_MOUNT_PATH).
 RUN mkdir -p /app/data
-VOLUME ["/app/data"]
 EXPOSE 3000
-CMD ["node", "server.js"]
+# HOSTNAME is forced here because platforms set it to the container name.
+CMD ["sh", "-c", "HOSTNAME=0.0.0.0 exec node server.js"]
