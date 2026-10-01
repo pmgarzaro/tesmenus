@@ -54,6 +54,6 @@ test("parcours principal", async ({ page }) => {
   await expect(page.getByText("3. Déroulé")).toBeVisible();
   await page.getByText("Mode cuisine").click();
   await expect(page.getByText(/Étape 1\//)).toBeVisible();
-  await page.getByRole("button", { name: "Suivant →" }).click();
+  await page.getByRole("button", { name: "Suivant" }).click();
   await expect(page.getByText(/Étape 2\//)).toBeVisible();
 });
