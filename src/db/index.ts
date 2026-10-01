@@ -5,10 +5,9 @@ import { drizzle, type BetterSQLite3Database } from "drizzle-orm/better-sqlite3"
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import * as schema from "./schema";
 
-export const DATA_DIR = path.resolve(
-  /*turbopackIgnore: true*/
-  process.env.DATA_DIR || process.env.RAILWAY_VOLUME_MOUNT_PATH || "data",
-);
+import { DATA_DIR } from "@/lib/paths";
+
+export { DATA_DIR };
 export const UPLOADS_DIR = path.join(DATA_DIR, "uploads");
 
 type Db = BetterSQLite3Database<typeof schema>;

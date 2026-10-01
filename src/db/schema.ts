@@ -164,3 +164,19 @@ export const settings = sqliteTable(
   },
   (t) => [primaryKey({ columns: [t.key] })],
 );
+
+export const users = sqliteTable("users", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
+  email: text("email").notNull().unique(), // stored lowercase
+  passwordHash: text("password_hash").notNull(),
+  createdAt: createdAt(),
+});
+
+// One-time invitation links: after the first account, sign-up needs one.
+export const invites = sqliteTable("invites", {
+  token: text("token").primaryKey(),
+  createdBy: integer("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: createdAt(),
+  usedAt: text("used_at"),
+});

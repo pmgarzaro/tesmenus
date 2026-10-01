@@ -5,7 +5,6 @@ services:
     ports:
       - "3000:3000"
     environment:
-      APP_PASSWORD: ${APP_PASSWORD:?Définir APP_PASSWORD dans .env}
       SESSION_SECRET: ${SESSION_SECRET:-}
       # Vide = automatique (Secure si la requête arrive en HTTPS)
       COOKIE_SECURE: ${COOKIE_SECURE:-}
