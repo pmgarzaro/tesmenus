@@ -1,14 +1,15 @@
 "use client";
 
+import { BookOpen, CalendarDays, CookingPot, Settings, ShoppingCart } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const TABS = [
-  { href: "/recettes", label: "Recettes", icon: "📖" },
-  { href: "/planning", label: "Planning", icon: "📅" },
-  { href: "/courses", label: "Courses", icon: "🛒" },
-  { href: "/batch", label: "Batch", icon: "🥘" },
-  { href: "/reglages", label: "Réglages", icon: "⚙️" },
+  { href: "/recettes", label: "Recettes", Icon: BookOpen },
+  { href: "/planning", label: "Planning", Icon: CalendarDays },
+  { href: "/courses", label: "Courses", Icon: ShoppingCart },
+  { href: "/batch", label: "Batch", Icon: CookingPot },
+  { href: "/reglages", label: "Réglages", Icon: Settings },
 ];
 
 export function TabBar() {
@@ -32,7 +33,11 @@ export function TabBar() {
                   className={`absolute top-0.5 size-1.5 rounded-full ${active ? "bg-brand-500" : "bg-transparent"}`}
                   aria-hidden="true"
                 />
-                <span className={`text-xl leading-none transition-transform ${active ? "-translate-y-0.5 scale-110" : ""}`}>{t.icon}</span>
+                <t.Icon
+                  className={`size-6 transition-transform ${active ? "-translate-y-0.5" : ""}`}
+                  strokeWidth={active ? 2.2 : 1.8}
+                  aria-hidden
+                />
                 {t.label}
               </Link>
             </li>

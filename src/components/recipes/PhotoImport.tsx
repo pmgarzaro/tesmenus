@@ -1,5 +1,6 @@
 "use client";
 
+import { Camera, ChevronLeft, ChevronRight, Images, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { PhotoImport as PhotoResult } from "@/lib/import/photo";
@@ -151,10 +152,10 @@ export function PhotoImport({ allTags }: { allTags: string[] }) {
               <span className="absolute left-1 top-1 rounded bg-black/60 px-1.5 text-xs text-white">{i + 1}</span>
               <div className="absolute inset-x-1 bottom-1 flex justify-between">
                 <span className="flex gap-1">
-                  <button type="button" disabled={busy || i === 0} onClick={() => move(i, -1)} aria-label="Avant" className="rounded bg-white/90 px-1.5 text-sm disabled:opacity-30">←</button>
-                  <button type="button" disabled={busy || i === pages.length - 1} onClick={() => move(i, 1)} aria-label="Après" className="rounded bg-white/90 px-1.5 text-sm disabled:opacity-30">→</button>
+                  <button type="button" disabled={busy || i === 0} onClick={() => move(i, -1)} aria-label="Avant" className="rounded bg-white/90 p-1 disabled:opacity-30"><ChevronLeft className="size-4" aria-hidden /></button>
+                  <button type="button" disabled={busy || i === pages.length - 1} onClick={() => move(i, 1)} aria-label="Après" className="rounded bg-white/90 p-1 disabled:opacity-30"><ChevronRight className="size-4" aria-hidden /></button>
                 </span>
-                <button type="button" disabled={busy} onClick={() => remove(p.id)} aria-label={`Retirer la page ${i + 1}`} className="rounded bg-white/90 px-1.5 text-sm">✕</button>
+                <button type="button" disabled={busy} onClick={() => remove(p.id)} aria-label={`Retirer la page ${i + 1}`} className="rounded bg-white/90 p-1"><X className="size-4" aria-hidden /></button>
               </div>
             </li>
           ))}
@@ -164,10 +165,12 @@ export function PhotoImport({ allTags }: { allTags: string[] }) {
       {pages.length < MAX_PAGES && !busy && (
         <div className="grid grid-cols-2 gap-2">
           <button type="button" onClick={() => cameraInput.current?.click()} className="rounded-xl border border-stone-300 py-3 font-medium">
-            📷 {pages.length ? "Page suivante" : "Prendre une photo"}
+            <Camera className="mr-1.5 inline size-5 align-[-4px]" aria-hidden />
+            {pages.length ? "Page suivante" : "Prendre une photo"}
           </button>
           <button type="button" onClick={() => galleryInput.current?.click()} className="rounded-xl border border-stone-300 py-3 font-medium">
-            🖼️ Galerie
+            <Images className="mr-1.5 inline size-5 align-[-4px]" aria-hidden />
+            Galerie
           </button>
         </div>
       )}
@@ -190,7 +193,7 @@ export function PhotoImport({ allTags }: { allTags: string[] }) {
             {status.step === "upload"
               ? "Envoi des photos…"
               : status.ai
-                ? "✨ Lecture par l'IA (environ 10 à 30 s)…"
+                ? "Lecture par l'IA (environ 10 à 30 s)…"
                 : `Lecture de la page ${Math.min(status.done + 1, status.total)} sur ${status.total}…`}{" "}
             {elapsed > 0 && <span className="text-stone-400">{elapsed} s</span>}
           </p>

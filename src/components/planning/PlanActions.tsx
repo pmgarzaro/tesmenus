@@ -1,5 +1,6 @@
 "use client";
 
+import { Dices } from "lucide-react";
 import { useTransition } from "react";
 import { deletePlanAction, fillEmptyAction, regeneratePlanAction } from "@/app/(app)/planning/actions";
 
@@ -13,7 +14,8 @@ export function PlanActions({ planId, emptyCount }: { planId: number; emptyCount
           onClick={() => start(() => fillEmptyAction(planId))}
           className="font-medium text-brand-700 underline disabled:opacity-50"
         >
-          🎲 Compléter les {emptyCount} repas vides au hasard
+          <Dices className="mr-1 inline size-4 align-[-2px]" aria-hidden />
+          Compléter les {emptyCount} repas vides au hasard
         </button>
       )}
       <button
@@ -21,7 +23,12 @@ export function PlanActions({ planId, emptyCount }: { planId: number; emptyCount
         onClick={() => confirm("Remplacer tous les repas par un nouveau tirage ?") && start(() => regeneratePlanAction(planId))}
         className="text-brand-700 underline disabled:opacity-50"
       >
-        {pending ? "…" : "🎲 Tout relancer"}
+        {pending ? "…" : (
+          <>
+            <Dices className="mr-1 inline size-4 align-[-2px]" aria-hidden />
+            Tout relancer
+          </>
+        )}
       </button>
       <button
         disabled={pending}

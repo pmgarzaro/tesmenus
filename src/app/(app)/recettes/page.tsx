@@ -1,3 +1,4 @@
+import { Refrigerator, Snowflake } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 import { PageHeader } from "@/components/PageHeader";
@@ -37,7 +38,8 @@ export default async function RecipesPage({ searchParams }: { searchParams: Prom
         action={
           all.length > 0 && (
             <Link href="/recettes/vide-frigo" className="rounded-xl border border-stone-300 bg-white px-3 py-1.5 text-sm">
-              🧊 Vide-frigo
+              <Refrigerator className="mr-1 inline size-4 align-[-3px]" aria-hidden />
+              Vide-frigo
             </Link>
           )
         }
@@ -72,7 +74,7 @@ export default async function RecipesPage({ searchParams }: { searchParams: Prom
                         <span className="min-w-0 truncate">{r.tags.slice(0, 2).join(" · ")}</span>
                         <span className="shrink-0 font-medium">
                           {formatMinutes(totalMinutes(r))}
-                          {r.freezable && " ❄️"}
+                          {r.freezable && <Snowflake className="ml-1 inline size-3.5 align-[-2px] text-sky-600" aria-label="congelable" />}
                         </span>
                       </span>
                     </Link>

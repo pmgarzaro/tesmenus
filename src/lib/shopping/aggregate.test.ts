@@ -94,6 +94,6 @@ describe("toText", () => {
           { name: "piles", amount: "", aisle: "autre" },
         ],
       }),
-    ).toBe("🛒 Courses du 5 octobre\n\nFruits & légumes\n- Oignon : 3\n\nÉpicerie\n- Riz : 500 g\n\nAutre\n- Piles");
+    ).toBe("Courses du 5 octobre\n\nFruits & légumes\n- Oignon : 3\n\nÉpicerie\n- Riz : 500 g\n\nAutre\n- Piles");
   });
 });

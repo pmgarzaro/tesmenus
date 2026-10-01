@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowLeftRight, BookOpen, Dices, Eye, Repeat2, Trash2, UtensilsCrossed } from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { type CellAction, editCell } from "@/app/(app)/planning/actions";
@@ -120,11 +121,20 @@ export function PlanGrid({ planId, entries, recipes, today }: { planId: number; 
 }
 
 function Cell({ e }: { e: GridEntry }) {
-  if (e.isEatingOut) return <span className="text-stone-500">🍽️ Repas extérieur</span>;
+  if (e.isEatingOut) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-stone-500">
+        <UtensilsCrossed className="size-4" aria-hidden /> Repas extérieur
+      </span>
+    );
+  }
   if (e.isLeftover && e.recipe) {
     return (
       <span className="min-w-0">
-        <span className="block truncate text-stone-700">♻️ Restes : {e.recipe.title}</span>
+        <span className="flex items-center gap-1.5 text-stone-700">
+          <Repeat2 className="size-4 shrink-0" aria-hidden />
+          <span className="truncate">Restes : {e.recipe.title}</span>
+        </span>
         {e.source && <span className="block text-xs text-stone-400">du {when(e.source)}</span>}
       </span>
     );
@@ -171,6 +181,7 @@ function CellSheet({
     .reverse();
   const shown = recipes.filter((r) => !query.trim() || fold(r.title + " " + r.tags.join(" ")).includes(fold(query)));
   const btn = "flex w-full items-center gap-3 rounded-xl border border-stone-200 px-3 py-2.5 text-left disabled:opacity-50";
+  const ico = "size-5 shrink-0 text-brand-700";
 
   return (
     <div className="fixed inset-0 z-30 flex items-end bg-black/40 sm:items-center sm:justify-center" onClick={onClose}>
@@ -233,26 +244,36 @@ function CellSheet({
             )}
             {!e.isLeftover && (
               <button className={btn} disabled={pending} onClick={() => onAction({ type: "reroll" }, false)}>
-                🎲 {e.recipe ? "Autre recette au hasard" : "Une recette au hasard"}
+                <Dices className={ico} aria-hidden /> {e.recipe ? "Autre recette au hasard" : "Une recette au hasard"}
               </button>
             )}
-            <button className={btn} disabled={pending} onClick={() => setPicking(true)}>📖 Choisir une recette</button>
+            <button className={btn} disabled={pending} onClick={() => setPicking(true)}>
+              <BookOpen className={ico} aria-hidden /> Choisir une recette
+            </button>
             {!e.isLeftover && (
-              <button className={btn} disabled={pending} onClick={onSwap}>↔️ Échanger avec un autre repas</button>
+              <button className={btn} disabled={pending} onClick={onSwap}>
+                <ArrowLeftRight className={ico} aria-hidden /> Échanger avec un autre repas
+              </button>
             )}
             {sources.map((s) => (
               <button key={s.id} className={btn} disabled={pending || e.source?.id === s.id} onClick={() => onAction({ type: "leftover", sourceId: s.id })}>
-                ♻️ Restes du {when(s)} ({s.recipe?.title})
+                <Repeat2 className={ico} aria-hidden /> Restes du {when(s)} ({s.recipe?.title})
               </button>
             ))}
             {!e.isEatingOut && (
-              <button className={btn} disabled={pending} onClick={() => onAction({ type: "out" })}>🍽️ Repas extérieur</button>
+              <button className={btn} disabled={pending} onClick={() => onAction({ type: "out" })}>
+                <UtensilsCrossed className={ico} aria-hidden /> Repas extérieur
+              </button>
             )}
             {(e.recipe || e.isEatingOut) && (
-              <button className={btn} disabled={pending} onClick={() => onAction({ type: "empty" })}>🗑️ Vider</button>
+              <button className={btn} disabled={pending} onClick={() => onAction({ type: "empty" })}>
+                <Trash2 className={ico} aria-hidden /> Vider
+              </button>
             )}
             {e.recipe && (
-              <Link href={`/recettes/${e.recipe.id}`} className={btn}>👀 Voir la recette</Link>
+              <Link href={`/recettes/${e.recipe.id}`} className={btn}>
+                <Eye className={ico} aria-hidden /> Voir la recette
+              </Link>
             )}
             <button onClick={onClose} className="w-full py-2 text-stone-500">Fermer</button>
           </div>

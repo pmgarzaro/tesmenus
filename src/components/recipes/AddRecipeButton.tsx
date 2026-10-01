@@ -1,13 +1,14 @@
 "use client";
 
+import { Camera, ClipboardPaste, Link2, PenLine, Plus } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
 const SOURCES = [
-  { label: "Depuis une photo", hint: "Livre, fiche papier (une ou plusieurs pages)", href: "/recettes/importer/photo", icon: "📷" },
-  { label: "Depuis un lien", hint: "Marmiton, 750g, blogs…", href: "/recettes/importer/url", icon: "🔗" },
-  { label: "Coller un texte", hint: "Légende Instagram, e-mail…", href: "/recettes/importer/texte", icon: "📋" },
-  { label: "Saisie manuelle", hint: "Remplir le formulaire", href: "/recettes/nouvelle", icon: "✍️" },
+  { label: "Depuis une photo", hint: "Livre, fiche papier (une ou plusieurs pages)", href: "/recettes/importer/photo", Icon: Camera },
+  { label: "Depuis un lien", hint: "Marmiton, 750g, blogs…", href: "/recettes/importer/url", Icon: Link2 },
+  { label: "Coller un texte", hint: "Légende Instagram, e-mail…", href: "/recettes/importer/texte", Icon: ClipboardPaste },
+  { label: "Saisie manuelle", hint: "Remplir le formulaire", href: "/recettes/nouvelle", Icon: PenLine },
 ];
 
 /** Floating "+" button opening the list of ways to add a recipe. */
@@ -20,7 +21,7 @@ export function AddRecipeButton() {
         aria-label="Ajouter une recette"
         className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-4 z-20 flex size-14 items-center justify-center btn-primary text-3xl sm:right-[max(1rem,calc(50vw-24rem+1rem))]"
       >
-        +
+        <Plus className="size-7" strokeWidth={2.5} aria-hidden />
       </button>
       {open && (
         <div className="fixed inset-0 z-30 flex items-end bg-black/40 sm:items-center sm:justify-center" onClick={() => setOpen(false)}>
@@ -35,7 +36,9 @@ export function AddRecipeButton() {
               {SOURCES.map((s) => {
                 const content = (
                   <>
-                    <span className="text-2xl">{s.icon}</span>
+                    <span className="grid size-10 shrink-0 place-items-center rounded-full bg-brand-50 text-brand-700">
+                      <s.Icon className="size-5" aria-hidden />
+                    </span>
                     <span>
                       <span className="block font-medium">{s.label}</span>
                       <span className="block text-sm text-stone-500">{s.hint}</span>

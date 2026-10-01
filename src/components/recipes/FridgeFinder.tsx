@@ -1,5 +1,6 @@
 "use client";
 
+import { X } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { formatMinutes } from "@/lib/labels";
@@ -51,7 +52,7 @@ export function FridgeFinder({ recipes, suggestions, pantry }: { recipes: Fridge
           <div className="flex flex-wrap gap-1.5">
             {owned.map((o) => (
               <button key={o} onClick={() => setOwned(owned.filter((x) => x !== o))} className="rounded-full bg-brand-100 px-3 py-1 text-sm text-brand-700">
-                {o} ✕
+                {o} <X className="inline size-3.5 align-[-2px]" aria-hidden />
               </button>
             ))}
             <button onClick={() => setOwned([])} className="px-2 text-sm text-stone-500 underline">Tout effacer</button>
@@ -78,7 +79,7 @@ export function FridgeFinder({ recipes, suggestions, pantry }: { recipes: Fridge
                 </span>
               </span>
               <span className="mt-0.5 block text-xs text-stone-500">
-                {r.missing.length === 0 ? "✓ Tu as tout" : `Il manque : ${r.missing.map(capitalize).join(", ")}`}
+                {r.missing.length === 0 ? "Tu as tout" : `Il manque : ${r.missing.map(capitalize).join(", ")}`}
                 {r.minutes > 0 && ` · ${formatMinutes(r.minutes)}`}
               </span>
             </Link>

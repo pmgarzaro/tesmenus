@@ -1,5 +1,6 @@
 "use client";
 
+import { Dices, PenLine, Sparkles, X } from "lucide-react";
 import { useMemo, useState, useTransition } from "react";
 import { createPlanAction } from "@/app/(app)/planning/actions";
 import { fold } from "@/lib/recipes/normalize";
@@ -66,10 +67,10 @@ export function NewPlanForm({
       <div role="radiogroup" aria-label="Remplissage" className="grid grid-cols-2 gap-2">
         {(
           [
-            ["auto", "🎲 Automatique", "L'appli choisit les repas, tu ajustes ensuite."],
-            ["manual", "✍️ Je remplis moi-même", "Planning vide, tu choisis chaque repas."],
+            ["auto", "Automatique", "L'appli choisit les repas, tu ajustes ensuite.", Dices],
+            ["manual", "Je remplis moi-même", "Planning vide, tu choisis chaque repas.", PenLine],
           ] as const
-        ).map(([value, label, hint]) => (
+        ).map(([value, label, hint, Icon]) => (
           <button
             type="button"
             key={value}
@@ -78,7 +79,10 @@ export function NewPlanForm({
             onClick={() => setMode(value)}
             className={`rounded-2xl border-2 p-3 text-left ${mode === value ? "border-brand-600 bg-brand-50" : "border-stone-200 bg-white"}`}
           >
-            <span className="block font-semibold">{label}</span>
+            <span className="flex items-center gap-1.5 font-semibold">
+              <Icon className="size-4 text-brand-700" aria-hidden />
+              {label}
+            </span>
             <span className="block text-xs text-stone-500">{hint}</span>
           </button>
         ))}
@@ -109,7 +113,9 @@ export function NewPlanForm({
       {aiAvailable && (
         <section className={`${box} border border-violet-200`}>
           <label className="block space-y-2">
-            <span className="font-semibold">✨ Demande libre</span>
+            <span className="flex items-center gap-1.5 font-semibold">
+              <Sparkles className="size-4 text-violet-600" aria-hidden /> Demande libre
+            </span>
             <span className="block text-sm text-stone-500">
               Dis ce que tu veux, l&apos;IA le transforme en contraintes. Ex. : « léger mardi et jeudi, on mange au resto
               vendredi soir, pas de poisson, mettre le chili ».
@@ -168,7 +174,7 @@ export function NewPlanForm({
                 onClick={() => setInclude(include.filter((x) => x !== id))}
                 className="rounded-full bg-brand-100 px-3 py-1 text-brand-700"
               >
-                {recipes.find((r) => r.id === id)?.title} ✕
+                {recipes.find((r) => r.id === id)?.title} <X className="inline size-3.5 align-[-2px]" aria-hidden />
               </button>
             ))}
           </div>

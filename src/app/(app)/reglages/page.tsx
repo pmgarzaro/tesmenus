@@ -1,3 +1,4 @@
+import { Sparkles } from "lucide-react";
 import { asc, eq } from "drizzle-orm";
 import { PageHeader } from "@/components/PageHeader";
 import { getDb, schema } from "@/db";
@@ -31,7 +32,9 @@ export default async function SettingsPage() {
       <SettingsForm settings={settings} />
 
       <section className="mt-6 space-y-3 paper p-4">
-        <h2 className="font-semibold">✨ Intelligence artificielle</h2>
+        <h2 className="flex items-center gap-2">
+          <Sparkles className="size-5 text-violet-600" aria-hidden /> Intelligence artificielle
+        </h2>
         {aiConfigured() ? (
           <>
             <AiToggle enabled={settings.aiEnabled} />

@@ -1,5 +1,6 @@
 "use client";
 
+import { Check, Ellipsis, House, Infinity, RotateCw, Share2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useOptimistic, useState, useTransition } from "react";
 import { type ShopAction, shopAction } from "@/app/(app)/courses/actions";
@@ -119,12 +120,25 @@ export function ShoppingList({ planId, title, items, manual }: { planId: number;
           }}
           className="text-brand-700 underline"
         >
-          {copied ? "Copié ✓" : "📋 Partager / copier"}
+          {copied ? (
+            <>
+              <Check className="mr-1 inline size-4 align-[-3px]" aria-hidden />
+              Copié
+            </>
+          ) : (
+            <>
+              <Share2 className="mr-1 inline size-4 align-[-3px]" aria-hidden />
+              Partager / copier
+            </>
+          )}
         </button>
         {done > 0 && (
           <button onClick={() => act({ type: "uncheckAll" })} className="text-stone-500 underline">Tout décocher</button>
         )}
-        <button onClick={() => router.refresh()} className="text-stone-500 underline" aria-label="Rafraîchir">↻ Rafraîchir</button>
+        <button onClick={() => router.refresh()} className="text-stone-500 underline" aria-label="Rafraîchir">
+          <RotateCw className="mr-1 inline size-3.5 align-[-2px]" aria-hidden />
+          Rafraîchir
+        </button>
       </div>
 
       {rows.length === 0 && (
@@ -170,7 +184,7 @@ export function ShoppingList({ planId, title, items, manual }: { planId: number;
                       aria-label={r.kind === "item" ? `Options ${r.item.name}` : `Supprimer ${r.item.label}`}
                       className="shrink-0 rounded-lg px-2 py-2 text-stone-400"
                     >
-                      {r.kind === "item" ? "⋯" : "✕"}
+                      {r.kind === "item" ? <Ellipsis className="size-5" aria-hidden /> : <X className="size-4" aria-hidden />}
                     </button>
                   </li>
                 );
@@ -234,7 +248,8 @@ export function ShoppingList({ planId, title, items, manual }: { planId: number;
               }}
               className="w-full rounded-xl border border-stone-200 px-3 py-2.5 text-left"
             >
-              🏠 Déjà au placard (cette semaine)
+              <House className="mr-2 inline size-5 align-[-4px] text-brand-700" aria-hidden />
+              Déjà au placard (cette semaine)
             </button>
             <button
               onClick={() => {
@@ -243,7 +258,8 @@ export function ShoppingList({ planId, title, items, manual }: { planId: number;
               }}
               className="w-full rounded-xl border border-stone-200 px-3 py-2.5 text-left"
             >
-              ♾️ Toujours au placard (ne plus jamais l&apos;afficher)
+              <Infinity className="mr-2 inline size-5 align-[-4px] text-brand-700" aria-hidden />
+              Toujours au placard (ne plus jamais l&apos;afficher)
             </button>
             <button onClick={() => setMenuFor(null)} className="w-full py-2 text-stone-500">Fermer</button>
           </div>

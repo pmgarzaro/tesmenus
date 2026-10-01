@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { BackLink } from "@/components/BackLink";
 import { PageHeader } from "@/components/PageHeader";
 import { NewBatchForm } from "@/components/batch/NewBatchForm";
 import { requireUser } from "@/lib/auth";
@@ -18,7 +18,7 @@ export default async function NewBatchPage({ searchParams }: { searchParams: Pro
   const recipes = listRecipeSummaries(householdId).map((r) => ({ id: r.id, title: r.title, servings: r.servings, minutes: totalMinutes(r) }));
   return (
     <>
-      <Link href="/batch" className="text-sm text-stone-500">← Batch cooking</Link>
+      <BackLink href="/batch">Batch cooking</BackLink>
       <PageHeader title="Nouvelle session" />
       <NewBatchForm
         key={planId ?? "none"}

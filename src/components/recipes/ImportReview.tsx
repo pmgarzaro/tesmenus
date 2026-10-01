@@ -1,7 +1,9 @@
 "use client";
 
+import { Sparkles, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import type { ImportResult } from "@/lib/import/build";
+import { Warnings } from "@/components/Warnings";
 import { RecipeForm } from "./RecipeForm";
 
 const METHOD_NOTE = {
@@ -9,7 +11,7 @@ const METHOD_NOTE = {
   html: { text: "Extraction approximative à partir de la mise en page.", tone: "bg-amber-50 text-amber-800" },
   text: { text: "Texte analysé ligne par ligne.", tone: "bg-amber-50 text-amber-800" },
   photo: { text: "Texte lu sur la photo.", tone: "bg-amber-50 text-amber-800" },
-  ai: { text: "✨ Recette lue par l'IA (Gemini).", tone: "bg-violet-50 text-violet-800" },
+  ai: { text: "Recette lue par l'IA (Gemini).", tone: "bg-violet-50 text-violet-800" },
 };
 
 /** Review screen shared by every import: banner, photos / raw text, pre-filled form. */
@@ -35,12 +37,16 @@ export function ImportReview({
   return (
     <div className="space-y-3">
       <div className={`space-y-1 rounded-2xl p-3 text-sm ${note.tone}`}>
-        <p className="font-medium">{note.text}</p>
-        {result.warnings.map((w) => <p key={w}>⚠️ {w}</p>)}
+        <p className="flex items-center gap-1.5 font-medium">
+          {result.method === "ai" && <Sparkles className="size-4" aria-hidden />}
+          {note.text}
+        </p>
+        <Warnings items={result.warnings} />
         {flagged && <p>Relis la recette : les champs encadrés en orange sont à vérifier.</p>}
         {duplicate && (
           <p>
-            ⚠️ Cette page est déjà dans ta bibliothèque :{" "}
+            <TriangleAlert className="mr-1 inline size-4 align-[-3px]" aria-hidden />
+            Cette page est déjà dans ta bibliothèque :{" "}
             <Link href={`/recettes/${duplicate.id}`} className="underline">{duplicate.title}</Link>
           </p>
         )}

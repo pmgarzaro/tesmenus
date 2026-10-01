@@ -1,3 +1,4 @@
+import { BackLink } from "@/components/BackLink";
 import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
 import { NewPlanForm } from "@/components/planning/NewPlanForm";
@@ -19,7 +20,7 @@ export default async function NewPlanPage() {
     .map((r) => ({ id: r.id, title: r.title, totalMinutes: totalMinutes(r) }));
   return (
     <>
-      <Link href="/planning/historique" className="text-sm text-stone-500">← Plannings</Link>
+      <BackLink href="/planning/historique">Plannings</BackLink>
       <PageHeader title="Nouveau planning" />
       {recipes.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-stone-300 p-6 text-center text-stone-500">

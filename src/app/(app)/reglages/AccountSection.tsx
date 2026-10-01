@@ -1,5 +1,6 @@
 "use client";
 
+import { Check, X } from "lucide-react";
 import { useActionState, useState, useTransition } from "react";
 import { changePassword, generateInvite, renameHousehold, setAiEnabled, testAiAction } from "./actions";
 
@@ -52,7 +53,7 @@ export function InviteButtons() {
             }}
             className="text-brand-700 underline"
           >
-            {copied ? "Copié ✓" : "Copier le lien"}
+            {copied ? "Copié" : "Copier le lien"}
           </button>
         </div>
       )}
@@ -124,9 +125,13 @@ export function AiTest() {
       </button>
       {result &&
         (result.ok ? (
-          <p className="rounded-xl bg-green-50 p-2 text-sm text-green-800">✓ L&apos;IA répond avec le modèle {result.model}.</p>
+          <p className="flex items-center gap-1.5 rounded-xl bg-green-50 p-2 text-sm text-green-800">
+            <Check className="size-4 shrink-0" aria-hidden /> L&apos;IA répond avec le modèle {result.model}.
+          </p>
         ) : (
-          <p className="rounded-xl bg-red-50 p-2 text-sm text-red-800">✗ {result.error}</p>
+          <p className="flex gap-1.5 rounded-xl bg-red-50 p-2 text-sm text-red-800">
+            <X className="mt-0.5 size-4 shrink-0" aria-hidden /> {result.error}
+          </p>
         ))}
     </div>
   );

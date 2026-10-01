@@ -61,7 +61,7 @@ export async function createPlanAction(payload: NewPlanPayload): Promise<string>
       constraints.excludeTags = [...new Set([...constraints.excludeTags, ...(c.excludeTags ?? [])])];
       constraints.onlyFreezable ||= Boolean(c.onlyFreezable);
       eatingOut = understood.eatingOut;
-      if (understood.summary) notes.push(`✨ Compris : ${understood.summary}`);
+      if (understood.summary) notes.push(`Compris : ${understood.summary}`);
     } catch (e) {
       notes.push(`Demande libre ignorée (${e instanceof AiError ? e.message : "erreur de l'IA"}).`);
     }

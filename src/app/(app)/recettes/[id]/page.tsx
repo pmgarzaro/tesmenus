@@ -1,3 +1,5 @@
+import { Refrigerator, Snowflake } from "lucide-react";
+import { BackLink } from "@/components/BackLink";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AddToPlanButton } from "@/components/planning/AddToPlanButton";
@@ -20,7 +22,7 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
   return (
     <article className="space-y-4">
       <div className="flex items-center justify-between">
-        <Link href="/recettes" className="text-sm text-stone-500">← Recettes</Link>
+        <BackLink href="/recettes">Recettes</BackLink>
         <Link href={`/recettes/${r.id}/modifier`} className="rounded-xl border border-stone-300 bg-white px-4 py-1.5 text-sm font-medium">
           Modifier
         </Link>
@@ -54,10 +56,15 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
         ))}
       </dl>
 
-      <p className="text-sm text-stone-600">
-        {r.fridgeDays ? `🧊 Se garde ${r.fridgeDays} jour${r.fridgeDays > 1 ? "s" : ""} au frigo` : "🧊 Conservation non précisée"}
-        {" · "}
-        {r.freezable ? "❄️ Congelable" : "Ne se congèle pas"}
+      <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-stone-600">
+        <span className="inline-flex items-center gap-1.5">
+          <Refrigerator className="size-4" aria-hidden />
+          {r.fridgeDays ? `Se garde ${r.fridgeDays} jour${r.fridgeDays > 1 ? "s" : ""} au frigo` : "Conservation non précisée"}
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <Snowflake className="size-4" aria-hidden />
+          {r.freezable ? "Congelable" : "Ne se congèle pas"}
+        </span>
       </p>
 
       <ScaledIngredients
