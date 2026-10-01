@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { AISLES, MEAL_TYPES, STEP_TYPES } from "@/db/schema";
 import { saveRecipe } from "@/app/(app)/recettes/actions";
 import { AISLE_LABELS, EQUIPMENT_SUGGESTIONS, MEAL_TYPE_LABELS, STEP_TYPE_LABELS } from "@/lib/labels";
+import type { FieldFlags } from "@/lib/import/build";
 import type { RecipeInput } from "@/lib/recipes/input";
 import { guessAisle, normalizeTags, parseIngredientLine, parseQuantity } from "@/lib/recipes/normalize";
 import { guessStep, splitSteps } from "@/lib/recipes/steps";
@@ -77,14 +78,24 @@ function move<T>(list: T[], i: number, delta: number): T[] {
   return copy;
 }
 
+// Highlight for imported values to double-check (cleared once edited).
+const flagRing = "ring-2 ring-amber-400";
+
 export function RecipeForm({
   recipeId,
   initial,
   allTags,
+  flags,
+  sourceType = "manuel",
+  cancelHref,
 }: {
   recipeId: number | null;
   initial: RecipeInput;
   allTags: string[];
+  /** Imported draft: fields to check on the review screen. */
+  flags?: FieldFlags;
+  sourceType?: "manuel" | "url" | "photo";
+  cancelHref?: string;
 }) {
   const [title, setTitle] = useState(initial.title);
   const [description, setDescription] = useState(initial.description ?? "");
@@ -101,6 +112,23 @@ export function RecipeForm({
   const [ings, setIngs] = useState<IngRow[]>(
     initial.ingredients.length ? initial.ingredients.map(toIngRow) : [emptyIng()],
   );
+  // Flagged fields and ingredient rows (by key); a field leaves the set once edited.
+  const [flagged, setFlagged] = useState<Set<string>>(() => {
+    const set = new Set<string>();
+    if (!flags) return set;
+    for (const [field, flag] of Object.entries(flags)) if (typeof flag === "string") set.add(field);
+    for (const i of Object.keys(flags.ingredients ?? {})) set.add(`ing-${ings[Number(i)]?.key}`);
+    return set;
+  });
+  const isFlagged = (field: string) => flagged.has(field);
+  const reviewed = (field: string) =>
+    flagged.has(field) &&
+    setFlagged((f) => {
+      const next = new Set(f);
+      next.delete(field);
+      return next;
+    });
+  const ring = (field: string) => (isFlagged(field) ? flagRing : "");
   const [steps, setSteps] = useState<StepRow[]>(
     initial.steps.length ? initial.steps.map((s) => toStepRow(s)) : [emptyStep()],
   );
@@ -109,8 +137,10 @@ export function RecipeForm({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const updIng = (key: number, patch: Partial<IngRow>) =>
+  const updIng = (key: number, patch: Partial<IngRow>) => {
+    reviewed(`ing-${key}`);
     setIngs((rows) => rows.map((r) => (r.key === key ? { ...r, ...patch } : r)));
+  };
   const updStep = (key: number, patch: Partial<StepRow>) =>
     setSteps((rows) => rows.map((r) => (r.key === key ? { ...r, ...patch } : r)));
 
@@ -186,7 +216,7 @@ export function RecipeForm({
     if (typeof payload === "string") return setError(payload);
     setError(null);
     startTransition(async () => {
-      const err = await saveRecipe(recipeId, payload);
+      const err = await saveRecipe(recipeId, payload, sourceType);
       if (err) setError(err);
     });
   }
@@ -198,10 +228,13 @@ export function RecipeForm({
       <section className="space-y-3 rounded-2xl bg-white p-4 shadow-sm">
         <input
           value={title}
-          onChange={(e) => setTitle(e.target.value)}
+          onChange={(e) => {
+            reviewed("title");
+            setTitle(e.target.value);
+          }}
           required
           placeholder="Titre de la recette"
-          className={`${input} text-lg font-semibold`}
+          className={`${input} text-lg font-semibold ${ring("title")}`}
         />
         <textarea
           value={description}
@@ -213,19 +246,19 @@ export function RecipeForm({
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <label className="text-sm text-stone-600">
             Portions
-            <input value={servings} onChange={(e) => setServings(e.target.value)} inputMode="numeric" required className={input} />
+            <input value={servings} onChange={(e) => { reviewed("servings"); setServings(e.target.value); }} inputMode="numeric" required className={`${input} ${ring("servings")}`} />
           </label>
           <label className="text-sm text-stone-600">
             Préparation (min)
-            <input value={prep} onChange={(e) => setPrep(e.target.value)} inputMode="numeric" className={input} />
+            <input value={prep} onChange={(e) => { reviewed("prepMinutes"); setPrep(e.target.value); }} inputMode="numeric" className={`${input} ${ring("prepMinutes")}`} />
           </label>
           <label className="text-sm text-stone-600">
             Cuisson (min)
-            <input value={cook} onChange={(e) => setCook(e.target.value)} inputMode="numeric" className={input} />
+            <input value={cook} onChange={(e) => { reviewed("cookMinutes"); setCook(e.target.value); }} inputMode="numeric" className={`${input} ${ring("cookMinutes")}`} />
           </label>
           <label className="text-sm text-stone-600">
             Type
-            <select value={mealType} onChange={(e) => setMealType(e.target.value as typeof mealType)} className={input}>
+            <select value={mealType} onChange={(e) => { reviewed("mealType"); setMealType(e.target.value as typeof mealType); }} className={`${input} ${ring("mealType")}`}>
               {MEAL_TYPES.map((t) => (
                 <option key={t} value={t}>{MEAL_TYPE_LABELS[t]}</option>
               ))}
@@ -234,8 +267,10 @@ export function RecipeForm({
         </div>
 
         <div className="space-y-2">
-          <span className="text-sm text-stone-600">Tags</span>
-          <div className="flex flex-wrap gap-1.5">
+          <span className="text-sm text-stone-600">
+            Tags{isFlagged("tags") && <span className="ml-2 text-xs text-amber-700">proposés, à vérifier</span>}
+          </span>
+          <div className="flex flex-wrap gap-1.5" onClick={() => reviewed("tags")}>
             {tags.map((t) => (
               <button
                 type="button"
@@ -280,11 +315,11 @@ export function RecipeForm({
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
           <label className="flex items-center gap-2 text-sm text-stone-600">
             Se garde
-            <input value={fridgeDays} onChange={(e) => setFridgeDays(e.target.value)} inputMode="numeric" className={`${small} w-14 text-right`} />
+            <input value={fridgeDays} onChange={(e) => { reviewed("fridgeDays"); setFridgeDays(e.target.value); }} inputMode="numeric" className={`${small} w-14 text-right ${ring("fridgeDays")}`} />
             jours au frigo
           </label>
-          <label className="flex items-center gap-2 text-sm text-stone-600">
-            <input type="checkbox" checked={freezable} onChange={(e) => setFreezable(e.target.checked)} className="size-5 accent-brand-600" />
+          <label className={`flex items-center gap-2 rounded-lg px-1 text-sm text-stone-600 ${ring("freezable")}`}>
+            <input type="checkbox" checked={freezable} onChange={(e) => { reviewed("freezable"); setFreezable(e.target.checked); }} className="size-5 accent-brand-600" />
             Congelable
           </label>
         </div>
@@ -294,7 +329,11 @@ export function RecipeForm({
         <h2 className="font-semibold">Ingrédients</h2>
         <ul className="space-y-3">
           {ings.map((r, i) => (
-            <li key={r.key} className="space-y-1.5 border-b border-stone-100 pb-3 last:border-0">
+            <li
+              key={r.key}
+              className={`space-y-1.5 border-b border-stone-100 pb-3 last:border-0 ${isFlagged(`ing-${r.key}`) ? "-mx-2 rounded-lg bg-amber-50 px-2 pt-2" : ""}`}
+            >
+              {isFlagged(`ing-${r.key}`) && <p className="text-xs text-amber-700">Quantité non reconnue : à vérifier</p>}
               <div className="flex gap-2">
                 <input
                   value={r.quantity}
@@ -513,7 +552,7 @@ export function RecipeForm({
       <div className="fixed inset-x-0 bottom-[calc(3.6rem+env(safe-area-inset-bottom))] z-10 border-t border-stone-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-2">
           {error ? <p className="flex-1 text-sm text-red-600">{error}</p> : <span className="flex-1" />}
-          <Link href={recipeId ? `/recettes/${recipeId}` : "/recettes"} className="px-3 py-2 text-stone-600">
+          <Link href={cancelHref ?? (recipeId ? `/recettes/${recipeId}` : "/recettes")} className="px-3 py-2 text-stone-600">
             Annuler
           </Link>
           <button disabled={pending} className="rounded-xl bg-brand-600 px-5 py-2 font-semibold text-white disabled:opacity-60">

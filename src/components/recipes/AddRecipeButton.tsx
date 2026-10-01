@@ -5,9 +5,9 @@ import { useState } from "react";
 
 const SOURCES = [
   { label: "Saisie manuelle", hint: "Remplir le formulaire", href: "/recettes/nouvelle", icon: "✍️" },
-  { label: "Depuis une URL", hint: "Bientôt (étape 3)", icon: "🔗" },
+  { label: "Depuis un lien", hint: "Marmiton, 750g, blogs…", href: "/recettes/importer/url", icon: "🔗" },
+  { label: "Coller un texte", hint: "Légende Instagram, e-mail…", href: "/recettes/importer/texte", icon: "📋" },
   { label: "Depuis une photo", hint: "Bientôt (étape 4)", icon: "📷" },
-  { label: "Coller un texte", hint: "Bientôt", icon: "📋" },
 ];
 
 /** Floating "+" button opening the list of ways to add a recipe. */

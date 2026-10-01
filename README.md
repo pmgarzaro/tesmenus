@@ -15,6 +15,14 @@ Tout tourne en local, **sans API payante** : pas de LLM. L'import des recettes r
 - Mots de passe hachés (scrypt). Pas de récupération par e-mail : un mot de passe se change depuis *Réglages → Mon compte*.
 - L'export JSON ne contient que les données du foyer de la personne connectée.
 
+## Import de recettes
+
+- **Lien** : la page est téléchargée par le serveur, puis la recette est lue dans les données structurées `schema.org/Recipe` (JSON-LD) présentes sur la plupart des sites. À défaut : microdonnées, puis titres « Ingrédients » / « Préparation » suivis de listes.
+- **Texte collé** (légende Instagram, e-mail…) : découpage par sections, ou à défaut ligne par ligne.
+- Toujours suivi d'un **écran de relecture** : les champs incertains (tags proposés, conservation, quantités non reconnues…) sont encadrés en orange.
+- Sur Android, une fois l'appli ajoutée à l'écran d'accueil, « Partager → Tes menus » depuis une page de recette lance l'import.
+- Sécurité : seules les adresses publiques http(s) sont acceptées (pas d'accès au réseau interne du serveur), 12 s et 4 Mo maximum.
+
 ## Stack
 
 Next.js 16 (App Router) + TypeScript, Drizzle ORM sur SQLite (`better-sqlite3`), Tailwind CSS 4, zod, Vitest.
@@ -66,13 +74,14 @@ Le port (`PORT`) est fourni par Railway et le cookie de session passe automatiqu
 |---|---|
 | `SESSION_SECRET` | Secret de signature du cookie (optionnel, généré sinon) |
 | `DATA_DIR` | Dossier des données (défaut : volume Railway, sinon `./data`) |
+| `IMPORT_ALLOW_PRIVATE` | `1` autorise l'import depuis des adresses locales (tests uniquement, jamais en production) |
 | `COOKIE_SECURE` | Force `true`/`false` ; par défaut détecté selon HTTPS |
 
 ## Avancement
 
 1. ✅ Squelette Next.js + SQLite + schéma + comptes et foyers + Docker / Railway
 2. ✅ CRUD recettes manuel + bibliothèque (recherche, filtres, portions)
-3. ⬜ Import par URL (JSON-LD puis heuristique HTML)
+3. ✅ Import par lien (JSON-LD, puis structure HTML) et par texte collé
 4. ⬜ Import par photo (OCR local) + écran de relecture
 5. ⬜ Planning (génération + édition)
 6. ⬜ Liste de courses (agrégation + conversion + rayons)

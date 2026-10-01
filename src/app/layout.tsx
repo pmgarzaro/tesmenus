@@ -4,6 +4,8 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Tes menus",
   description: "Recettes, planning, courses et batch cooking du foyer",
+  icons: { icon: "/icon.svg", apple: "/icon-192.png" },
+  appleWebApp: { capable: true, title: "Tes menus", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {

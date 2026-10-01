@@ -7,7 +7,11 @@ import { recipeInputSchema } from "@/lib/recipes/input";
 import { createRecipe, deleteRecipe, updateRecipe } from "@/lib/recipes/repo";
 
 /** Creates (id null) or updates a recipe, then opens it. Returns an error message otherwise. */
-export async function saveRecipe(id: number | null, payload: unknown): Promise<string> {
+export async function saveRecipe(
+  id: number | null,
+  payload: unknown,
+  sourceType: "manuel" | "url" | "photo" = "manuel",
+): Promise<string> {
   const { householdId } = await requireUser();
   const parsed = recipeInputSchema.safeParse(payload);
   if (!parsed.success) {
@@ -22,7 +26,7 @@ export async function saveRecipe(id: number | null, payload: unknown): Promise<s
   }
   let recipeId = id;
   if (recipeId === null) {
-    recipeId = createRecipe(householdId, parsed.data);
+    recipeId = createRecipe(householdId, parsed.data, sourceType);
   } else if (!updateRecipe(householdId, recipeId, parsed.data)) {
     return "Recette introuvable";
   }
