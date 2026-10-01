@@ -1,9 +1,9 @@
-import { asc } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { PageHeader } from "@/components/PageHeader";
 import { getDb, schema } from "@/db";
 import { requireUser } from "@/lib/auth";
 import { getSettings } from "@/lib/settings";
-import { InviteButton, PasswordForm } from "./AccountSection";
+import { HouseholdNameForm, InviteButtons, PasswordForm } from "./AccountSection";
 import { loadSampleRecipes } from "./actions";
 import { SettingsForm } from "./SettingsForm";
 
@@ -14,16 +14,24 @@ export default async function SettingsPage() {
   const members = getDb()
     .select({ id: schema.users.id, name: schema.users.name, email: schema.users.email })
     .from(schema.users)
+    .where(eq(schema.users.householdId, user.householdId))
     .orderBy(asc(schema.users.createdAt))
     .all();
+  const household = getDb()
+    .select()
+    .from(schema.households)
+    .where(eq(schema.households.id, user.householdId))
+    .get()!;
 
   return (
     <>
       <PageHeader title="Réglages" />
-      <SettingsForm settings={getSettings()} />
+      <SettingsForm settings={getSettings(user.householdId)} />
 
       <section className="mt-6 space-y-4 rounded-2xl bg-white p-4 shadow-sm">
-        <h2 className="font-semibold">Foyer</h2>
+        <h2 className="font-semibold">Mon foyer</h2>
+        <HouseholdNameForm name={household.name} />
+        <p className="text-sm text-stone-500">Membres (données partagées entre eux) :</p>
         <ul className="space-y-1 text-sm">
           {members.map((m) => (
             <li key={m.id}>
@@ -33,7 +41,7 @@ export default async function SettingsPage() {
             </li>
           ))}
         </ul>
-        <InviteButton />
+        <InviteButtons />
       </section>
 
       <section className="mt-6 space-y-4 rounded-2xl bg-white p-4 shadow-sm">

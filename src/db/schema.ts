@@ -6,6 +6,7 @@ import {
   real,
   sqliteTable,
   text,
+  uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
 export const MEAL_TYPES = ["entree", "plat", "dessert", "autre"] as const;
@@ -42,8 +43,21 @@ export const SLOTS = ["midi", "soir"] as const;
 const createdAt = () =>
   text("created_at").notNull().default(sql`(datetime('now'))`);
 
+// Every piece of data belongs to a household; its members share it.
+export const households = sqliteTable("households", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
+  createdAt: createdAt(),
+});
+
+const householdId = () =>
+  integer("household_id")
+    .notNull()
+    .references(() => households.id, { onDelete: "cascade" });
+
 export const recipes = sqliteTable("recipes", {
   id: integer("id").primaryKey({ autoIncrement: true }),
+  householdId: householdId(),
   title: text("title").notNull(),
   description: text("description"),
   servings: integer("servings").notNull().default(4),
@@ -62,11 +76,16 @@ export const recipes = sqliteTable("recipes", {
   updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
 });
 
-export const ingredients = sqliteTable("ingredients", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  name: text("name").notNull().unique(), // normalised name, e.g. "oignon"
-  aisle: text("aisle", { enum: AISLES }).notNull().default("autre"),
-});
+export const ingredients = sqliteTable(
+  "ingredients",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    householdId: householdId(),
+    name: text("name").notNull(), // normalised name, e.g. "oignon"
+    aisle: text("aisle", { enum: AISLES }).notNull().default("autre"),
+  },
+  (t) => [uniqueIndex("ingredients_household_name_idx").on(t.householdId, t.name)],
+);
 
 export const recipeIngredients = sqliteTable(
   "recipe_ingredients",
@@ -107,6 +126,7 @@ export const recipeSteps = sqliteTable(
 
 export const mealPlans = sqliteTable("meal_plans", {
   id: integer("id").primaryKey({ autoIncrement: true }),
+  householdId: householdId(),
   startDate: text("start_date").notNull(), // YYYY-MM-DD
   days: integer("days").notNull(),
   createdAt: createdAt(),
@@ -150,6 +170,7 @@ export const shoppingListItems = sqliteTable(
 
 export const batchSessions = sqliteTable("batch_sessions", {
   id: integer("id").primaryKey({ autoIncrement: true }),
+  householdId: householdId(),
   planId: integer("plan_id").references(() => mealPlans.id, { onDelete: "set null" }),
   selection: text("selection", { mode: "json" }).$type<unknown>().notNull(),
   content: text("content", { mode: "json" }).$type<unknown>().notNull(),
@@ -159,14 +180,16 @@ export const batchSessions = sqliteTable("batch_sessions", {
 export const settings = sqliteTable(
   "settings",
   {
+    householdId: householdId(),
     key: text("key").notNull(),
     value: text("value", { mode: "json" }).$type<unknown>().notNull(),
   },
-  (t) => [primaryKey({ columns: [t.key] })],
+  (t) => [primaryKey({ columns: [t.householdId, t.key] })],
 );
 
 export const users = sqliteTable("users", {
   id: integer("id").primaryKey({ autoIncrement: true }),
+  householdId: householdId(),
   name: text("name").notNull(),
   email: text("email").notNull().unique(), // stored lowercase
   passwordHash: text("password_hash").notNull(),
@@ -174,8 +197,10 @@ export const users = sqliteTable("users", {
 });
 
 // One-time invitation links: after the first account, sign-up needs one.
+// With a household the newcomer joins it, without one they start their own.
 export const invites = sqliteTable("invites", {
   token: text("token").primaryKey(),
+  householdId: integer("household_id").references(() => households.id, { onDelete: "cascade" }),
   createdBy: integer("created_by").references(() => users.id, { onDelete: "set null" }),
   createdAt: createdAt(),
   usedAt: text("used_at"),

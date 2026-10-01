@@ -16,9 +16,14 @@ function open(): Db {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
   const sqlite = new Database(path.join(DATA_DIR, "app.db"));
   sqlite.pragma("journal_mode = WAL");
-  sqlite.pragma("foreign_keys = ON");
   const db = drizzle(sqlite, { schema });
+  // Foreign keys stay off while migrating: rebuilding a table (drop + rename)
+  // would otherwise cascade-delete the rows that reference it.
+  sqlite.pragma("foreign_keys = OFF");
   migrate(db, { migrationsFolder: path.resolve(/*turbopackIgnore: true*/ process.env.MIGRATIONS_DIR ?? "drizzle") });
+  sqlite.pragma("foreign_keys = ON");
+  const violations = sqlite.pragma("foreign_key_check") as unknown[];
+  if (violations.length) throw new Error(`Migration : clés étrangères invalides ${JSON.stringify(violations)}`);
   return db;
 }
 

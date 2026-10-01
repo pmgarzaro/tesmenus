@@ -1,11 +1,16 @@
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { getDb, schema } from "./index";
 import { SEED_RECIPES } from "./seed-data";
 
-// Inserts the sample recipes if the library is empty. Returns the number added.
-export function seedIfEmpty(): number {
+// Inserts the sample recipes if the household's library is empty.
+// Returns the number added.
+export function seedIfEmpty(householdId: number): number {
   const db = getDb();
-  const [{ count }] = db.select({ count: sql<number>`count(*)` }).from(schema.recipes).all();
+  const [{ count }] = db
+    .select({ count: sql<number>`count(*)` })
+    .from(schema.recipes)
+    .where(eq(schema.recipes.householdId, householdId))
+    .all();
   if (count > 0) return 0;
 
   db.transaction((tx) => {
@@ -13,6 +18,7 @@ export function seedIfEmpty(): number {
       const [{ id: recipeId }] = tx
         .insert(schema.recipes)
         .values({
+          householdId,
           title: r.title,
           description: r.description,
           servings: r.servings,
@@ -29,8 +35,11 @@ export function seedIfEmpty(): number {
       r.ingredients.forEach(([name, aisle, quantity, unit, label], position) => {
         const [{ id: ingredientId }] = tx
           .insert(schema.ingredients)
-          .values({ name, aisle })
-          .onConflictDoUpdate({ target: schema.ingredients.name, set: { name } })
+          .values({ householdId, name, aisle })
+          .onConflictDoUpdate({
+            target: [schema.ingredients.householdId, schema.ingredients.name],
+            set: { name },
+          })
           .returning({ id: schema.ingredients.id })
           .all();
         tx.insert(schema.recipeIngredients)

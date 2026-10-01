@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { getDb, schema } from "@/db";
 import { SLOTS } from "@/db/schema";
@@ -21,21 +22,28 @@ export const DEFAULT_SETTINGS: Settings = {
   dinnerCoversNextLunch: true,
 };
 
-export function getSettings(): Settings {
-  const rows = getDb().select().from(schema.settings).all();
+export function getSettings(householdId: number): Settings {
+  const rows = getDb()
+    .select()
+    .from(schema.settings)
+    .where(eq(schema.settings.householdId, householdId))
+    .all();
   const stored = Object.fromEntries(rows.map((r) => [r.key, r.value]));
   const parsed = settingsSchema.partial().safeParse(stored);
   return { ...DEFAULT_SETTINGS, ...(parsed.success ? parsed.data : {}) };
 }
 
-export function saveSettings(values: Settings) {
+export function saveSettings(householdId: number, values: Settings) {
   const valid = settingsSchema.parse(values);
   const db = getDb();
   db.transaction((tx) => {
     for (const [key, value] of Object.entries(valid)) {
       tx.insert(schema.settings)
-        .values({ key, value })
-        .onConflictDoUpdate({ target: schema.settings.key, set: { value } })
+        .values({ householdId, key, value })
+        .onConflictDoUpdate({
+          target: [schema.settings.householdId, schema.settings.key],
+          set: { value },
+        })
         .run();
     }
   });

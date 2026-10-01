@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { AuthForm } from "@/components/AuthForm";
 import { MIN_PASSWORD_LENGTH } from "@/lib/password";
-import { canSignUp, countUsers } from "@/lib/auth";
+import { getSignupTarget } from "@/lib/auth";
 import { signup } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -12,9 +12,9 @@ export default async function SignupPage({
   searchParams: Promise<{ invite?: string }>;
 }) {
   const { invite } = await searchParams;
-  const first = countUsers() === 0;
+  const target = getSignupTarget(invite);
 
-  if (!canSignUp(invite)) {
+  if (!target) {
     return (
       <>
         <p className="mb-6 text-stone-600">
@@ -30,9 +30,16 @@ export default async function SignupPage({
   return (
     <>
       <p className="mb-8 text-stone-500">
-        {first
-          ? "Bienvenue ! Crée le premier compte du foyer. Tu pourras ensuite inviter d'autres personnes."
-          : "Tu as été invité·e à rejoindre le foyer. Crée ton compte."}
+        {target.kind === "first" &&
+          "Bienvenue ! Crée le premier compte. Tu pourras ensuite inviter d'autres personnes."}
+        {target.kind === "join" && (
+          <>
+            Tu as été invité·e à rejoindre <strong>{target.householdName}</strong>. Vous partagerez
+            les recettes, plannings et listes de courses.
+          </>
+        )}
+        {target.kind === "new" &&
+          "Tu as été invité·e à utiliser l'appli. Crée ton compte : tu auras ton propre espace, séparé des autres foyers."}
       </p>
       <AuthForm
         action={signup}
@@ -51,7 +58,7 @@ export default async function SignupPage({
           },
         ]}
       />
-      {!first && (
+      {target.kind !== "first" && (
         <p className="mt-6 text-sm text-stone-500">
           Déjà un compte ? <Link href="/login" className="text-brand-600 underline">Se connecter</Link>
         </p>

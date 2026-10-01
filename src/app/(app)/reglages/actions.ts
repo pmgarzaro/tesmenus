@@ -8,9 +8,9 @@ import { MIN_PASSWORD_LENGTH, hashPassword, verifyPassword } from "@/lib/passwor
 import { saveSettings } from "@/lib/settings";
 
 export async function updateSettings(_prev: string | null, form: FormData): Promise<string | null> {
-  await requireUser();
+  const user = await requireUser();
   try {
-    saveSettings({
+    saveSettings(user.householdId, {
       defaultDays: Number(form.get("defaultDays")),
       activeSlots: form.getAll("activeSlots").map(String) as ("midi" | "soir")[],
       people: Number(form.get("people")),
@@ -25,16 +25,34 @@ export async function updateSettings(_prev: string | null, form: FormData): Prom
 }
 
 export async function loadSampleRecipes(): Promise<void> {
-  await requireUser();
+  const user = await requireUser();
   const { seedIfEmpty } = await import("@/db/seed");
-  seedIfEmpty();
+  seedIfEmpty(user.householdId);
   revalidatePath("/recettes");
 }
 
-/** Returns the invite path; the client turns it into a full URL. */
-export async function generateInvite(): Promise<string> {
+/**
+ * "join": the newcomer shares this household's data (partner).
+ * "new": the newcomer gets their own, separate household (friend, colleague).
+ * Returns the invite path; the client turns it into a full URL.
+ */
+export async function generateInvite(kind: "join" | "new"): Promise<string> {
   const user = await requireUser();
-  return `/signup?invite=${createInvite(user.id)}`;
+  const token = createInvite(user.id, kind === "join" ? user.householdId : null);
+  return `/signup?invite=${token}`;
+}
+
+export async function renameHousehold(_prev: string | null, form: FormData): Promise<string | null> {
+  const user = await requireUser();
+  const name = String(form.get("name") ?? "").trim();
+  if (!name || name.length > 60) return "Nom invalide";
+  getDb()
+    .update(schema.households)
+    .set({ name })
+    .where(eq(schema.households.id, user.householdId))
+    .run();
+  revalidatePath("/reglages");
+  return "Nom enregistré";
 }
 
 export async function changePassword(_prev: string | null, form: FormData): Promise<string | null> {

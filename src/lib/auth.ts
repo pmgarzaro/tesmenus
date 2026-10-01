@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { and, eq, gt, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, gt, isNull, sql } from "drizzle-orm";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getDb, schema } from "@/db";
@@ -7,13 +7,18 @@ import { SESSION_COOKIE, SESSION_MAX_AGE, createSessionToken, verifySessionToken
 
 export const INVITE_VALIDITY_DAYS = 7;
 
-export type CurrentUser = { id: number; name: string; email: string };
+export type CurrentUser = { id: number; name: string; email: string; householdId: number };
 
 export async function getCurrentUser(): Promise<CurrentUser | null> {
   const userId = await verifySessionToken((await cookies()).get(SESSION_COOKIE)?.value);
   if (userId === null) return null;
   const user = getDb()
-    .select({ id: schema.users.id, name: schema.users.name, email: schema.users.email })
+    .select({
+      id: schema.users.id,
+      name: schema.users.name,
+      email: schema.users.email,
+      householdId: schema.users.householdId,
+    })
     .from(schema.users)
     .where(eq(schema.users.id, userId))
     .get();
@@ -47,9 +52,13 @@ export function countUsers(): number {
   return getDb().select({ n: sql<number>`count(*)` }).from(schema.users).get()!.n;
 }
 
-export function createInvite(createdBy: number): string {
+/**
+ * Creates a one-time invite. With `householdId` the newcomer joins that
+ * household; without it they start a new, separate one.
+ */
+export function createInvite(createdBy: number, householdId: number | null): string {
   const token = randomBytes(18).toString("base64url");
-  getDb().insert(schema.invites).values({ token, createdBy }).run();
+  getDb().insert(schema.invites).values({ token, createdBy, householdId }).run();
   return token;
 }
 
@@ -60,14 +69,27 @@ const inviteIsValid = (token: string) =>
     gt(schema.invites.createdAt, sql`datetime('now', ${`-${INVITE_VALIDITY_DAYS} days`})`),
   );
 
-export function isInviteValid(token: string | undefined): boolean {
-  if (!token) return false;
-  return !!getDb().select().from(schema.invites).where(inviteIsValid(token)).get();
-}
+export type SignupTarget =
+  | { kind: "first" } // very first account
+  | { kind: "join"; householdId: number; householdName: string }
+  | { kind: "new" };
 
-/** Sign-up is open for the very first account, then only with a valid invite. */
-export function canSignUp(inviteToken: string | undefined): boolean {
-  return countUsers() === 0 || isInviteValid(inviteToken);
+/**
+ * What signing up does right now: open for the very first account, then only
+ * with a valid invite. Returns null when sign-up is not allowed.
+ */
+export function getSignupTarget(inviteToken: string | undefined): SignupTarget | null {
+  if (countUsers() === 0) return { kind: "first" };
+  if (!inviteToken) return null;
+  const invite = getDb()
+    .select({ householdId: schema.invites.householdId, householdName: schema.households.name })
+    .from(schema.invites)
+    .leftJoin(schema.households, eq(schema.households.id, schema.invites.householdId))
+    .where(inviteIsValid(inviteToken))
+    .get();
+  if (!invite) return null;
+  if (invite.householdId === null) return { kind: "new" };
+  return { kind: "join", householdId: invite.householdId, householdName: invite.householdName ?? "" };
 }
 
 export function consumeInvite(token: string) {
@@ -76,4 +98,27 @@ export function consumeInvite(token: string) {
     .set({ usedAt: sql`datetime('now')` })
     .where(inviteIsValid(token))
     .run();
+}
+
+/**
+ * Household for the very first account: reuses data created before accounts
+ * existed (household 1 from the migration) if there is one.
+ */
+export function firstHousehold(name: string): number {
+  const db = getDb();
+  const orphan = db
+    .select({ id: schema.households.id })
+    .from(schema.households)
+    .orderBy(asc(schema.households.id))
+    .get();
+  if (orphan) return orphan.id;
+  return createHousehold(name);
+}
+
+export function createHousehold(name: string): number {
+  return getDb()
+    .insert(schema.households)
+    .values({ name })
+    .returning({ id: schema.households.id })
+    .get().id;
 }

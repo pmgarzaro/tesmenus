@@ -1,14 +1,17 @@
-import { asc } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { PageHeader } from "@/components/PageHeader";
 import { getDb, schema } from "@/db";
+import { requireUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 // Temporary list to check the database; the full library comes in step 2.
-export default function RecipesPage() {
+export default async function RecipesPage() {
+  const { householdId } = await requireUser();
   const recipes = getDb()
     .select({ id: schema.recipes.id, title: schema.recipes.title, tags: schema.recipes.tags })
     .from(schema.recipes)
+    .where(eq(schema.recipes.householdId, householdId))
     .orderBy(asc(schema.recipes.title))
     .all();
   return (

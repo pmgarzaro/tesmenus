@@ -4,12 +4,16 @@ Application web perso de planification de repas pour le foyer : recettes, planni
 
 Tout tourne en local, **sans API payante** : pas de LLM. L'import des recettes repose sur le JSON-LD `schema.org/Recipe`, l'analyse heuristique du HTML ou du texte, et l'OCR local pour les photos. Le planning et le batch cooking sont calculés par des algorithmes en code.
 
-## Comptes
+## Comptes et foyers
 
-- Au premier lancement, l'inscription est ouverte pour créer **le premier compte**.
-- Ensuite, l'inscription se fait uniquement **sur invitation** : *Réglages → Inviter quelqu'un* génère un lien valable 7 jours, utilisable une fois.
-- Tous les comptes partagent les mêmes données (recettes, plannings, courses) : c'est l'appli du foyer.
+- Chaque compte appartient à un **foyer**. Les membres d'un foyer partagent les mêmes recettes, plannings et listes de courses ; les foyers sont isolés les uns des autres.
+- Au premier lancement, l'inscription est ouverte pour créer **le premier compte** (et son foyer).
+- Ensuite, l'inscription se fait uniquement **sur invitation**, depuis *Réglages → Mon foyer* :
+  - **Inviter dans mon foyer** : la personne rejoint ton foyer (conjoint·e, colocataire) ;
+  - **Inviter un nouveau foyer** : la personne obtient son propre espace, vide et séparé (ami·e, collègue). Elle pourra à son tour inviter les membres de son foyer.
+- Les liens sont valables 7 jours et utilisables une seule fois.
 - Mots de passe hachés (scrypt). Pas de récupération par e-mail : un mot de passe se change depuis *Réglages → Mon compte*.
+- L'export JSON ne contient que les données du foyer de la personne connectée.
 
 ## Stack
 
@@ -20,11 +24,10 @@ Next.js 16 (App Router) + TypeScript, Drizzle ORM sur SQLite (`better-sqlite3`),
 ```bash
 cp .env.example .env      # optionnel
 npm install
-npm run db:seed           # optionnel : 8 recettes d'exemple
 npm run dev               # http://localhost:3000
 ```
 
-Au premier lancement, l'appli propose de créer le premier compte.
+Au premier lancement, l'appli propose de créer le premier compte. Les recettes d'exemple se chargent depuis *Réglages*.
 
 Au démarrage, la base `data/app.db` est créée et les migrations (`drizzle/`) sont appliquées automatiquement.
 
@@ -33,7 +36,7 @@ Au démarrage, la base `data/app.db` est créée et les migrations (`drizzle/`) 
 | `npm test` | Tests unitaires (Vitest) |
 | `npm run lint` | Vérification TypeScript |
 | `npm run db:generate` | Génère une migration après modification de `src/db/schema.ts` |
-| `npm run db:seed` | Ajoute les recettes d'exemple si la bibliothèque est vide |
+| `npm run db:seed` | Ajoute les recettes d'exemple aux foyers dont la bibliothèque est vide |
 
 ## Déploiement (Docker)
 
@@ -67,7 +70,7 @@ Le port (`PORT`) est fourni par Railway et le cookie de session passe automatiqu
 
 ## Avancement
 
-1. ✅ Squelette Next.js + SQLite + schéma + comptes utilisateurs + Docker / Railway
+1. ✅ Squelette Next.js + SQLite + schéma + comptes et foyers + Docker / Railway
 2. ⬜ CRUD recettes manuel + bibliothèque
 3. ⬜ Import par URL (JSON-LD puis heuristique HTML)
 4. ⬜ Import par photo (OCR local) + écran de relecture

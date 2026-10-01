@@ -5,7 +5,13 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import type { AuthState } from "@/components/AuthForm";
 import { getDb, schema } from "@/db";
-import { canSignUp, consumeInvite, startSession } from "@/lib/auth";
+import {
+  consumeInvite,
+  createHousehold,
+  firstHousehold,
+  getSignupTarget,
+  startSession,
+} from "@/lib/auth";
 import { MIN_PASSWORD_LENGTH, hashPassword, verifyPassword } from "@/lib/password";
 
 function safeNext(form: FormData): string {
@@ -52,13 +58,21 @@ export async function signup(_prev: AuthState, form: FormData): Promise<AuthStat
   const passwordHash = await hashPassword(password);
   const db = getDb();
   const result = db.transaction((tx) => {
-    if (!canSignUp(invite)) return "Ce lien d'invitation n'est plus valide";
+    const target = getSignupTarget(invite);
+    if (!target) return "Ce lien d'invitation n'est plus valide";
     if (tx.select().from(schema.users).where(eq(schema.users.email, email)).get()) {
       return "Un compte existe déjà avec cet e-mail";
     }
+    const householdName = `Foyer de ${name}`;
+    const householdId =
+      target.kind === "join"
+        ? target.householdId
+        : target.kind === "first"
+          ? firstHousehold(householdName)
+          : createHousehold(householdName);
     const { id } = tx
       .insert(schema.users)
-      .values({ name, email, passwordHash })
+      .values({ name, email, passwordHash, householdId })
       .returning({ id: schema.users.id })
       .get();
     if (invite) consumeInvite(invite);
