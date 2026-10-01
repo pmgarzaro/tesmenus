@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "tesmenus-ocr-"));
 const { ocrImage } = await import("./index");
 const { importFromPhotos } = await import("@/lib/import/photo");
-const { resolveUpload, deleteUploads } = await import("@/lib/uploads");
+const { resolveUpload, deleteUploads, saveRecipePhoto, cleanupOrphanPhotos } = await import("@/lib/uploads");
 
 const fixture = (name: string) => fs.readFileSync(path.join(import.meta.dirname, "__fixtures__", name));
 
@@ -63,5 +63,20 @@ describe("photo import", { timeout: 60_000 }, () => {
     }).jpeg().toBuffer();
     const { result } = await importFromPhotos(1, [noise]);
     expect(result.warnings[0]).toMatch(/difficile à lire/);
+  });
+});
+
+describe("orphan photos", () => {
+  it("removes old photos no recipe uses, keeps the others", async () => {
+    const kept = await saveRecipePhoto(7, fixture("printed.jpg"));
+    const orphan = await saveRecipePhoto(7, fixture("printed.jpg"));
+    const fresh = await saveRecipePhoto(7, fixture("printed.jpg"));
+    const old = Date.now() - 2 * 24 * 3600_000;
+    for (const p of [kept, orphan]) fs.utimesSync(resolveUpload(7, p)!, old / 1000, old / 1000);
+    expect(cleanupOrphanPhotos(7, new Set([kept]))).toBe(1);
+    expect(resolveUpload(7, kept)).toBeTruthy();
+    expect(resolveUpload(7, orphan)).toBeNull();
+    expect(resolveUpload(7, fresh)).toBeTruthy(); // too recent: import maybe still in review
+    expect(cleanupOrphanPhotos(8, new Set())).toBe(0);
   });
 });

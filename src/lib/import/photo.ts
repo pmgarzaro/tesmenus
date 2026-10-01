@@ -1,5 +1,7 @@
 import { type OcrResult, ocrImage } from "@/lib/ocr";
-import { saveRecipePhoto } from "@/lib/uploads";
+import { eq } from "drizzle-orm";
+import { getDb, schema } from "@/db";
+import { cleanupOrphanPhotos, saveRecipePhoto } from "@/lib/uploads";
 import { type ImportResult, buildDraft } from "./build";
 import { parseRecipeText } from "./text";
 
@@ -19,6 +21,19 @@ export async function importFromPhotos(
   photos: Buffer[],
   onProgress?: (done: number, total: number) => void,
 ): Promise<PhotoImport> {
+  // Housekeeping: photos of imports never saved, older than a day.
+  try {
+    const used = getDb()
+      .select({ paths: schema.recipes.imagePaths })
+      .from(schema.recipes)
+      .where(eq(schema.recipes.householdId, householdId))
+      .all()
+      .flatMap((r) => r.paths);
+    cleanupOrphanPhotos(householdId, new Set(used));
+  } catch (e) {
+    console.error("Photo cleanup", e);
+  }
+
   const imagePaths: string[] = [];
   const pages: OcrResult[] = [];
   for (const [i, photo] of photos.entries()) {

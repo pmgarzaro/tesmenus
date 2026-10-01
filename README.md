@@ -46,6 +46,14 @@ Tout tourne en local, **sans API payante** : pas de LLM. L'import des recettes r
 - **Fiche** : mise en place regroupée par ingrédient, ingrédients de la session, déroulé horodaté, durée batch vs séparée, conservation (frigo plafonné prudemment : poisson 2 j, viande 3 j, autres 4 j ; congélation des portions trop lointaines si le plat s'y prête, avec rappel de décongélation la veille ; alerte sinon), réchauffage et ordre de consommation. Imprimable.
 - **Mode cuisine** : une étape à la fois en grand, minuteurs multiples qui continuent en arrière-plan (vibration + bip), écran maintenu allumé (Wake Lock), progression conservée.
 
+## Sécurité et robustesse
+
+- Mots de passe hachés (scrypt), cookie de session signé, inscription sur invitation, données isolées par foyer (vérifié par les tests).
+- Connexion limitée à 10 essais par compte et 30 par IP sur 15 minutes ; inscriptions limitées par IP.
+- Import par lien : adresses publiques uniquement (pas d'accès au réseau interne du serveur).
+- Photos servies aux seuls membres du foyer ; les photos d'imports abandonnés sont supprimées après 24 h.
+- CI GitHub Actions : types, tests, build et parcours de bout en bout à chaque push.
+
 ## Stack
 
 Next.js 16 (App Router) + TypeScript, Drizzle ORM sur SQLite (`better-sqlite3`), Tailwind CSS 4, zod, Vitest.
@@ -64,7 +72,8 @@ Au démarrage, la base `data/app.db` est créée et les migrations (`drizzle/`) 
 
 | Commande | Rôle |
 |---|---|
-| `npm test` | Tests unitaires (Vitest) |
+| `npm test` | Tests unitaires et d'intégration (Vitest, ~200 tests) |
+| `npm run test:e2e` | Parcours complet dans Chromium (Playwright), après `npm run build` |
 | `npm run lint` | Vérification TypeScript |
 | `npm run db:generate` | Génère une migration après modification de `src/db/schema.ts` |
 | `npm run db:seed` | Ajoute les recettes d'exemple aux foyers dont la bibliothèque est vide |

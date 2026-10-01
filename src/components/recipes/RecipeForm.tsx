@@ -369,12 +369,12 @@ export function RecipeForm({
                   className={`${small} min-w-0 flex-1`}
                 />
               </div>
-              <div className="flex items-center gap-2 text-xs text-stone-500">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-stone-500">
                 <select
                   value={r.aisle}
                   onChange={(e) => updIng(r.key, { aisle: e.target.value as Aisle | "" })}
                   aria-label="Rayon"
-                  className="rounded border border-stone-200 bg-white px-1 py-0.5"
+                  className="max-w-[60%] rounded border border-stone-200 bg-white px-1 py-0.5"
                 >
                   <option value="">
                     Rayon auto{r.label.trim() ? ` (${AISLE_LABELS[guessAisle(r.label)]})` : ""}

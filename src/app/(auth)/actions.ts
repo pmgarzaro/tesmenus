@@ -1,6 +1,7 @@
 "use server";
 
 import { eq } from "drizzle-orm";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import type { AuthState } from "@/components/AuthForm";
@@ -13,6 +14,16 @@ import {
   startSession,
 } from "@/lib/auth";
 import { MIN_PASSWORD_LENGTH, hashPassword, verifyPassword } from "@/lib/password";
+import { hit, reset } from "@/lib/rate-limit";
+
+const MINUTES = 60_000;
+
+async function clientIp(): Promise<string> {
+  const h = await headers();
+  return h.get("x-forwarded-for")?.split(",")[0].trim() || h.get("x-real-ip") || "local";
+}
+
+const tooMany = (minutes: number) => `Trop de tentatives. Réessaie dans ${minutes} min.`;
 
 function safeNext(form: FormData): string {
   const next = String(form.get("next") ?? "/");
@@ -27,10 +38,13 @@ function fail(error: string, form: FormData, keys: string[]): AuthState {
 export async function login(_prev: AuthState, form: FormData): Promise<AuthState> {
   const email = String(form.get("email") ?? "").trim().toLowerCase();
   const password = String(form.get("password") ?? "");
+  const wait = Math.max(hit(`login:${email}`, 10, 15 * MINUTES), hit(`login-ip:${await clientIp()}`, 30, 15 * MINUTES));
+  if (wait) return fail(tooMany(wait), form, ["email"]);
   const user = getDb().select().from(schema.users).where(eq(schema.users.email, email)).get();
   if (!user || !(await verifyPassword(password, user.passwordHash))) {
     return fail("E-mail ou mot de passe incorrect", form, ["email"]);
   }
+  reset(`login:${email}`);
   await startSession(user.id);
   redirect(safeNext(form));
 }
@@ -52,6 +66,8 @@ export async function signup(_prev: AuthState, form: FormData): Promise<AuthStat
     invite: form.get("invite") || undefined,
   });
   const keep = ["name", "email"];
+  const wait = hit(`signup-ip:${await clientIp()}`, 10, 60 * MINUTES);
+  if (wait) return fail(tooMany(wait), form, keep);
   if (!parsed.success) return fail(parsed.error.issues[0].message, form, keep);
   const { name, email, password, invite } = parsed.data;
 

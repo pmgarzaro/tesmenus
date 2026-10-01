@@ -35,3 +35,28 @@ export function deleteUploads(householdId: number, rels: string[]) {
     if (abs) fs.rmSync(abs, { force: true });
   }
 }
+
+/**
+ * Deletes a household's photos older than `maxAgeMs` that no recipe uses
+ * (photo imports abandoned before saving). Returns how many were removed.
+ */
+export function cleanupOrphanPhotos(householdId: number, used: Set<string>, maxAgeMs = 24 * 3600_000, now = Date.now()): number {
+  const dir = path.join(UPLOADS_DIR, `h${householdId}`);
+  let removed = 0;
+  let files: string[] = [];
+  try {
+    files = fs.readdirSync(dir);
+  } catch {
+    return 0;
+  }
+  for (const f of files) {
+    const rel = `h${householdId}/${f}`;
+    if (!PATH_RE.test(rel) || used.has(rel)) continue;
+    const abs = path.join(dir, f);
+    if (now - fs.statSync(abs).mtimeMs > maxAgeMs) {
+      fs.rmSync(abs, { force: true });
+      removed++;
+    }
+  }
+  return removed;
+}
