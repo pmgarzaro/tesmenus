@@ -206,7 +206,8 @@ const UNIT_ALIASES: [Unit, string[]][] = [
   ["kg", ["kilogrammes", "kilogramme", "kilos", "kilo", "kg"]],
   ["g", ["grammes", "gramme", "gr.", "gr", "g"]],
   ["ml", ["millilitres", "millilitre", "ml"]],
-  ["cl", ["centilitres", "centilitre", "cl"]],
+  // "c)", "cI", "c1": usual OCR misreadings of "cl".
+  ["cl", ["centilitres", "centilitre", "cl", "c)", "ci", "c1"]],
   ["l", ["litres", "litre", "l"]],
   ["pincee", ["pincees", "pincee"]],
   ["botte", ["bottes", "botte", "bouquets", "bouquet"]],
@@ -251,6 +252,7 @@ export function parseIngredientLine(line: string): ParsedIngredient {
     if (folded.startsWith(alias)) {
       const next = folded.charAt(alias.length);
       if (next && /[a-z0-9]/.test(next)) continue; // "gousse" vs "gousses", "g" vs "gingembre"
+      if (alias === "ci" && next !== " ") continue;
       unit = u;
       rest = rest.slice(alias.length).trim();
       break;

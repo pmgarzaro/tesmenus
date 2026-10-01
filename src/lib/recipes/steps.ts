@@ -41,7 +41,10 @@ function parseTemperature(t: string): number | null {
   const c = t.match(/(\d{2,3})\s*°\s*c?/) ?? t.match(/(\d{2,3})\s*degres/);
   if (c) return Number(c[1]);
   const th = t.match(/\b(?:th\.?|thermostat)\s*(\d{1,2})\b/);
-  return th ? Number(th[1]) * 30 : null;
+  if (th) return Number(th[1]) * 30;
+  // "enfourner à 200" (unit lost or omitted): plausible oven temperatures only.
+  const bare = t.match(/\ba\s+(\d{3})\b(?!\s*(?:g|ml|cl|min))/);
+  return bare && Number(bare[1]) >= 100 && Number(bare[1]) <= 300 ? Number(bare[1]) : null;
 }
 
 export function guessStep(text: string): StepGuess {
@@ -64,6 +67,6 @@ export function guessStep(text: string): StepGuess {
 export function splitSteps(text: string): string[] {
   return text
     .split(/\n+/)
-    .map((l) => l.replace(/^\s*(?:étape\s*)?\d+\s*[.)/:-]?\s*/i, "").replace(/^\s*[-•*·]\s*/, "").trim())
+    .map((l) => l.replace(/^\s*(?:étape\s*\d+\s*[.,):-]?|\d+\s*[.,)/:-](?!\d))\s*/i, "").replace(/^\s*[-•*·]\s*/, "").trim())
     .filter(Boolean);
 }

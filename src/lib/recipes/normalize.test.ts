@@ -85,6 +85,8 @@ describe("parseIngredientLine", () => {
     ["1/2 citron", 0.5, "piece", "citron", "citron"],
     ["1 boîte de haricots rouges (400 g)", 1, "boite", "haricots rouges (400 g)", "haricots rouges"],
     ["20 g de gingembre", 20, "g", "gingembre", "gingembre"],
+    ["20 c) de lait", 20, "cl", "lait", "lait"],
+    ["2 citrons", 2, "piece", "citrons", "citron"],
     ["- 1 pincée de sel", 1, "pincee", "sel", "sel"],
     ["Sel, poivre", null, null, "Sel, poivre", "sel"],
   ])("%s", (line, quantity, unit, label, name) => {

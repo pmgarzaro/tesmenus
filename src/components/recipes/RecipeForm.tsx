@@ -88,6 +88,7 @@ export function RecipeForm({
   flags,
   sourceType = "manuel",
   cancelHref,
+  imagePaths,
 }: {
   recipeId: number | null;
   initial: RecipeInput;
@@ -96,6 +97,8 @@ export function RecipeForm({
   flags?: FieldFlags;
   sourceType?: "manuel" | "url" | "photo";
   cancelHref?: string;
+  /** Photos from the photo import, attached on creation. */
+  imagePaths?: string[];
 }) {
   const [title, setTitle] = useState(initial.title);
   const [description, setDescription] = useState(initial.description ?? "");
@@ -112,12 +115,17 @@ export function RecipeForm({
   const [ings, setIngs] = useState<IngRow[]>(
     initial.ingredients.length ? initial.ingredients.map(toIngRow) : [emptyIng()],
   );
+  const [steps, setSteps] = useState<StepRow[]>(
+    initial.steps.length ? initial.steps.map((s) => toStepRow(s)) : [emptyStep()],
+  );
+  const initialStepKeys = steps.map((s) => s.key);
   // Flagged fields and ingredient rows (by key); a field leaves the set once edited.
   const [flagged, setFlagged] = useState<Set<string>>(() => {
     const set = new Set<string>();
     if (!flags) return set;
     for (const [field, flag] of Object.entries(flags)) if (typeof flag === "string") set.add(field);
     for (const i of Object.keys(flags.ingredients ?? {})) set.add(`ing-${ings[Number(i)]?.key}`);
+    for (const i of Object.keys(flags.steps ?? {})) set.add(`step-${initialStepKeys[Number(i)]}`);
     return set;
   });
   const isFlagged = (field: string) => flagged.has(field);
@@ -129,9 +137,6 @@ export function RecipeForm({
       return next;
     });
   const ring = (field: string) => (isFlagged(field) ? flagRing : "");
-  const [steps, setSteps] = useState<StepRow[]>(
-    initial.steps.length ? initial.steps.map((s) => toStepRow(s)) : [emptyStep()],
-  );
   const [pasteIngs, setPasteIngs] = useState<string | null>(null);
   const [pasteSteps, setPasteSteps] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -141,8 +146,10 @@ export function RecipeForm({
     reviewed(`ing-${key}`);
     setIngs((rows) => rows.map((r) => (r.key === key ? { ...r, ...patch } : r)));
   };
-  const updStep = (key: number, patch: Partial<StepRow>) =>
+  const updStep = (key: number, patch: Partial<StepRow>) => {
+    if ("text" in patch) reviewed(`step-${key}`);
     setSteps((rows) => rows.map((r) => (r.key === key ? { ...r, ...patch } : r)));
+  };
 
   const addTags = (raw: string) => {
     setTags((t) => normalizeTags([...t, ...raw.split(",")]));
@@ -216,7 +223,7 @@ export function RecipeForm({
     if (typeof payload === "string") return setError(payload);
     setError(null);
     startTransition(async () => {
-      const err = await saveRecipe(recipeId, payload, sourceType);
+      const err = await saveRecipe(recipeId, payload, sourceType, imagePaths);
       if (err) setError(err);
     });
   }
@@ -333,7 +340,7 @@ export function RecipeForm({
               key={r.key}
               className={`space-y-1.5 border-b border-stone-100 pb-3 last:border-0 ${isFlagged(`ing-${r.key}`) ? "-mx-2 rounded-lg bg-amber-50 px-2 pt-2" : ""}`}
             >
-              {isFlagged(`ing-${r.key}`) && <p className="text-xs text-amber-700">Quantité non reconnue : à vérifier</p>}
+              {isFlagged(`ing-${r.key}`) && <p className="text-xs text-amber-700">Lecture incertaine : à vérifier</p>}
               <div className="flex gap-2">
                 <input
                   value={r.quantity}
@@ -448,7 +455,7 @@ export function RecipeForm({
                   rows={2}
                   placeholder="Décrire l'étape…"
                   aria-label={`Étape ${i + 1}`}
-                  className={`${input} min-w-0 flex-1`}
+                  className={`${input} min-w-0 flex-1 ${ring(`step-${s.key}`)}`}
                 />
               </div>
               <div className="flex flex-wrap items-center gap-1.5 pl-8 text-xs text-stone-500">

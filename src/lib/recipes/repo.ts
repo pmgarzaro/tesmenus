@@ -2,6 +2,7 @@ import { and, asc, eq, sql } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import type { IngredientInput, RecipeInput } from "./input";
 import { guessAisle, ingredientKey, normalizeIngredientName, normalizeTags } from "./normalize";
+import { deleteUploads } from "@/lib/uploads";
 import type { RecipeSummary } from "./search";
 
 type Db = ReturnType<typeof getDb>;
@@ -82,11 +83,12 @@ export function createRecipe(
   householdId: number,
   input: RecipeInput,
   sourceType: "manuel" | "url" | "photo" = "manuel",
+  imagePaths: string[] = [],
 ): number {
   return getDb().transaction((tx) => {
     const { id } = tx
       .insert(schema.recipes)
-      .values({ householdId, sourceType, ...recipeColumns(input) })
+      .values({ householdId, sourceType, imagePaths, ...recipeColumns(input) })
       .returning({ id: schema.recipes.id })
       .get();
     writeChildren(tx, householdId, id, input);
@@ -109,11 +111,14 @@ export function updateRecipe(householdId: number, id: number, input: RecipeInput
 }
 
 export function deleteRecipe(householdId: number, id: number): boolean {
-  const res = getDb()
+  const deleted = getDb()
     .delete(schema.recipes)
     .where(and(eq(schema.recipes.id, id), eq(schema.recipes.householdId, householdId)))
-    .run();
-  return res.changes > 0;
+    .returning({ imagePaths: schema.recipes.imagePaths })
+    .get();
+  if (!deleted) return false;
+  deleteUploads(householdId, deleted.imagePaths);
+  return true;
 }
 
 export function getRecipe(householdId: number, id: number) {

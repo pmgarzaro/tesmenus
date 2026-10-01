@@ -11,12 +11,21 @@ describe("guessStep", () => {
     ["Laisser reposer 2 heures au réfrigérateur.", { type: "repos", durationMinutes: 120 }],
     ["Mixer la soupe.", { type: "preparation", equipment: "mixeur" }],
     ["Cuire 10 à 12 minutes.", { type: "cuisson", durationMinutes: 12 }],
+    ["Couvrir de gruyère et enfourner 20 min à 200", { equipment: "four", temperature: 200, durationMinutes: 20 }],
   ] as const)("%s", (text, expected) => {
     expect(guessStep(text)).toMatchObject(expected);
   });
 });
 
 describe("splitSteps", () => {
+  it("keeps quantities that start a step", () => {
+    expect(splitSteps("2 oignons émincés à faire revenir.\n1,5 kg de farine à tamiser.\n3, Cuire")).toEqual([
+      "2 oignons émincés à faire revenir.",
+      "1,5 kg de farine à tamiser.",
+      "Cuire",
+    ]);
+  });
+
   it("splits lines and strips numbering", () => {
     expect(splitSteps("1. Éplucher.\n2) Couper\n\nÉtape 3 : Cuire\n- Servir")).toEqual([
       "Éplucher.",

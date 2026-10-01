@@ -90,6 +90,20 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
         )}
       </section>
 
+      {r.imagePaths.length > 0 && (
+        <section className="rounded-2xl bg-white p-4 shadow-sm">
+          <h2 className="mb-3 font-semibold">Recette originale</h2>
+          <div className="flex gap-2 overflow-x-auto">
+            {r.imagePaths.map((p, i) => (
+              <a key={p} href={`/api/uploads/${p}`} target="_blank" rel="noreferrer" className="shrink-0">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={`/api/uploads/${p}`} alt={`Page ${i + 1}`} loading="lazy" className="h-40 rounded-lg border border-stone-200 object-cover" />
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
+
       {(r.notes || r.sourceUrl) && (
         <section className="space-y-2 rounded-2xl bg-white p-4 text-sm shadow-sm">
           {r.notes && <p className="whitespace-pre-line">{r.notes}</p>}

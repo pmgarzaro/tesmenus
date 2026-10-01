@@ -3,15 +3,9 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { type ImportResponse, importText, importUrl } from "@/app/(app)/recettes/importer/actions";
-import { RecipeForm } from "./RecipeForm";
+import { ImportReview } from "./ImportReview";
 
 type Mode = "url" | "text";
-
-const METHOD_NOTE = {
-  jsonld: { text: "Recette structurée trouvée sur la page : extraction fiable.", tone: "bg-green-50 text-green-800" },
-  html: { text: "Extraction approximative à partir de la mise en page.", tone: "bg-amber-50 text-amber-800" },
-  text: { text: "Texte analysé ligne par ligne.", tone: "bg-amber-50 text-amber-800" },
-};
 
 /** Step 1: URL or text → Step 2: review form (pre-filled, doubtful fields highlighted). */
 export function ImportFlow({ mode, allTags, initialUrl }: { mode: Mode; allTags: string[]; initialUrl?: string }) {
@@ -44,34 +38,14 @@ export function ImportFlow({ mode, allTags, initialUrl }: { mode: Mode; allTags:
   }, [pending]);
 
   if (response?.ok) {
-    const { result, duplicate } = response;
-    const note = METHOD_NOTE[result.method];
-    const flagged = Object.keys(result.flags).length > 0;
     return (
-      <div className="space-y-3">
-        <div className={`space-y-1 rounded-2xl p-3 text-sm ${note.tone}`}>
-          <p className="font-medium">{note.text}</p>
-          {result.warnings.map((w) => <p key={w}>⚠️ {w}</p>)}
-          {flagged && <p>Relis la recette : les champs encadrés en orange sont à vérifier.</p>}
-          {duplicate && (
-            <p>
-              ⚠️ Cette page est déjà dans ta bibliothèque :{" "}
-              <Link href={`/recettes/${duplicate.id}`} className="underline">{duplicate.title}</Link>
-            </p>
-          )}
-          <button onClick={() => setResponse(null)} className="underline">
-            Recommencer
-          </button>
-        </div>
-        <RecipeForm
-          recipeId={null}
-          initial={result.draft}
-          flags={result.flags}
-          allTags={allTags}
-          sourceType={mode === "url" ? "url" : "manuel"}
-          cancelHref="/recettes"
-        />
-      </div>
+      <ImportReview
+        result={response.result}
+        duplicate={response.duplicate}
+        allTags={allTags}
+        sourceType={mode === "url" ? "url" : "manuel"}
+        onRestart={() => setResponse(null)}
+      />
     );
   }
 

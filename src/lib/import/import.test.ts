@@ -143,6 +143,12 @@ Préparation :
     expect(draft.servings).toBe(4);
   });
 
+  it("does not take a sub-heading for servings", () => {
+    const { draft } = importFromText("Tarte\nPour 6 personnes\nIngrédients\nPour la pâte : 250 g de farine\n125 g de beurre\nPréparation\nMélanger.");
+    expect(draft.servings).toBe(6);
+    expect(draft.ingredients[0].label).toMatch(/farine/);
+  });
+
   it("flags lines whose quantity was not understood", () => {
     const { flags } = importFromText("Test\nIngrédients\n200 g de farine\nun peu de 3 épices\nPréparation\nMélanger");
     expect(flags.ingredients).toEqual({ 1: "guess" });

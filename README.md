@@ -18,6 +18,7 @@ Tout tourne en local, **sans API payante** : pas de LLM. L'import des recettes r
 ## Import de recettes
 
 - **Lien** : la page est téléchargée par le serveur, puis la recette est lue dans les données structurées `schema.org/Recipe` (JSON-LD) présentes sur la plupart des sites. À défaut : microdonnées, puis titres « Ingrédients » / « Préparation » suivis de listes.
+- **Photo** (livre, fiche papier, une ou plusieurs pages) : lecture du texte en local avec Tesseract (modèle français inclus, aucune API payante), redressement automatique des photos prises de côté, lignes lues avec peu de confiance signalées. Bien adapté aux recettes imprimées, peu fiable sur l'écriture manuscrite. La photo est conservée (≤ 1600 px) et visible depuis la fiche recette, uniquement par les membres du foyer.
 - **Texte collé** (légende Instagram, e-mail…) : découpage par sections, ou à défaut ligne par ligne.
 - Toujours suivi d'un **écran de relecture** : les champs incertains (tags proposés, conservation, quantités non reconnues…) sont encadrés en orange.
 - Sur Android, une fois l'appli ajoutée à l'écran d'accueil, « Partager → Tes menus » depuis une page de recette lance l'import.
@@ -82,7 +83,7 @@ Le port (`PORT`) est fourni par Railway et le cookie de session passe automatiqu
 1. ✅ Squelette Next.js + SQLite + schéma + comptes et foyers + Docker / Railway
 2. ✅ CRUD recettes manuel + bibliothèque (recherche, filtres, portions)
 3. ✅ Import par lien (JSON-LD, puis structure HTML) et par texte collé
-4. ⬜ Import par photo (OCR local) + écran de relecture
+4. ✅ Import par photo (OCR local Tesseract) + écran de relecture
 5. ⬜ Planning (génération + édition)
 6. ⬜ Liste de courses (agrégation + conversion + rayons)
 7. ⬜ Batch cooking (fiche + mode cuisine)

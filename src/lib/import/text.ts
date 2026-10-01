@@ -16,8 +16,22 @@ const headingKind = (line: string): "ingredients" | "steps" | null => {
   return null;
 };
 
+// Bullets as written, or as OCR misreads them ("« 2 oignons", "= 20 cl").
+const BULLET = /^\s*(?:[-•*·–—~=«»>|_°]|[oe](?=\s+\d))\s*/;
+const META_WORD = /\b(pour|personnes?|portions?|parts?|preparation|cuisson|repos)\b/;
+
+/** One metadata item per line: "Pour 4 — Préparation : 30 min — Cuisson : 1 h". */
+function splitMetaLine(line: string): string[] {
+  const parts = line.split(/\s+[—–|•·]\s+|\s+-\s+/);
+  if (parts.length > 1 && parts.filter((p) => META_WORD.test(fold(p)) && /\d/.test(p)).length >= 2) return parts;
+  return [line];
+}
+
 export function parseRecipeText(text: string): RawRecipe {
-  const lines = text.split(/\r?\n/).map((l) => l.trim());
+  const lines = text
+    .split(/\r?\n/)
+    .flatMap(splitMetaLine)
+    .map((l) => l.replace(BULLET, "").trim());
   const raw: RawRecipe = { ingredientLines: [], stepTexts: [] };
   let section: "intro" | "ingredients" | "steps" = "intro";
   const intro: string[] = [];
@@ -26,19 +40,21 @@ export function parseRecipeText(text: string): RawRecipe {
   for (const line of lines) {
     if (!line || /^(#\S+\s*)+$/.test(line)) continue; // blank or hashtags only
     const f = fold(line);
+    // Metadata lines anywhere.
+    const meta = f.match(/^(pour|portions?|personnes?|parts?|temps de preparation|preparation|cuisson|temps de cuisson|repos)\s*:?\s*(.*)$/);
+    const isServings = meta && /^(pour|portion|personne|part)/.test(meta[1]);
+    const metaOk = meta && (isServings ? /^\d+\s*(pers|personnes?|parts?|portions?|couverts?)?\b\.?\s*$/.test(meta[2]) : /\d/.test(meta[2]));
+    if (meta && metaOk && line.length < 60 && !/[.!]$/.test(line)) {
+      if (isServings) raw.servingsText = meta[2];
+      else if (/cuisson/.test(meta[1])) raw.cookMinutes = parseTextDuration(meta[2]);
+      else if (/preparation/.test(meta[1])) raw.prepMinutes = parseTextDuration(meta[2]);
+      continue;
+    }
     const kind = headingKind(line);
     if (kind) {
       section = kind;
       // "Ingrédients (pour 4 personnes) :"
       if (kind === "ingredients" && !raw.servingsText && /\d/.test(line)) raw.servingsText = line;
-      continue;
-    }
-    // Metadata lines anywhere.
-    const meta = f.match(/^(pour|portions?|personnes?|parts?|temps de preparation|preparation|cuisson|temps de cuisson|repos)\s*:?\s*(.*)$/);
-    if (meta && meta[2] && /\d/.test(meta[2]) && line.length < 60) {
-      if (/^(pour|portion|personne|part)/.test(meta[1])) raw.servingsText = meta[2];
-      else if (/cuisson/.test(meta[1])) raw.cookMinutes = parseTextDuration(meta[2]);
-      else if (/preparation/.test(meta[1])) raw.prepMinutes = parseTextDuration(meta[2]);
       continue;
     }
     if (section === "intro") intro.push(line);

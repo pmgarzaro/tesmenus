@@ -17,6 +17,8 @@ export type RawRecipe = {
   /** recipeCategory / recipeCuisine / keywords */
   categories?: string[];
   sourceUrl?: string;
+  /** OCR lines read with low confidence: matching ingredients/steps get flagged. */
+  doubtfulLines?: string[];
 };
 
 /** "missing": nothing found, a default was used. "guess": deduced, to check. */
@@ -34,7 +36,7 @@ export type FieldFlags = {
   steps?: Record<number, Flag>;
 };
 
-export type ImportMethod = "jsonld" | "html" | "text";
+export type ImportMethod = "jsonld" | "html" | "text" | "photo";
 export type ImportResult = {
   draft: RecipeInput;
   flags: FieldFlags;
@@ -99,6 +101,11 @@ function categoryTags(categories: string[]): string[] {
 export function buildDraft(raw: RawRecipe, method: ImportMethod): ImportResult {
   const flags: FieldFlags = {};
   const warnings: string[] = [];
+  const doubtful = (raw.doubtfulLines ?? []).map((l) => fold(l));
+  const isDoubtful = (text: string) => {
+    const f = fold(text);
+    return f.length > 2 && doubtful.some((d) => d.includes(f) || f.includes(d));
+  };
 
   const title = clean(raw.title ?? "");
   if (!title) flags.title = "missing";
@@ -125,7 +132,7 @@ export function buildDraft(raw: RawRecipe, method: ImportMethod): ImportResult {
     const p = parseIngredientLine(line);
     if (!p.label) continue;
     // A digit left in the name means the quantity was not understood.
-    if (/^\d/.test(p.label) || (p.quantity === null && /\d/.test(line))) {
+    if (/^[^\p{L}]/u.test(p.label) || (p.quantity === null && /\d/.test(line)) || isDoubtful(line)) {
       flags.ingredients[ingredients.length] = "guess";
     }
     ingredients.push({
@@ -143,6 +150,11 @@ export function buildDraft(raw: RawRecipe, method: ImportMethod): ImportResult {
     .filter(Boolean)
     .map((text) => ({ text: text.slice(0, 2000), ...guessStep(text) }));
   if (steps.length === 0) warnings.push("Aucune étape trouvée : à saisir à la main.");
+  flags.steps = {};
+  steps.forEach((s, i) => {
+    if (isDoubtful(s.text)) flags.steps![i] = "guess";
+  });
+  if (raw.title && isDoubtful(raw.title)) flags.title = "guess";
 
   const categories = raw.categories ?? [];
   const meal = guessMealType([...categories, title]);
@@ -173,6 +185,7 @@ export function buildDraft(raw: RawRecipe, method: ImportMethod): ImportResult {
   flags.freezable = "guess";
 
   if (Object.keys(flags.ingredients).length === 0) delete flags.ingredients;
+  if (Object.keys(flags.steps).length === 0) delete flags.steps;
 
   return {
     draft: {
