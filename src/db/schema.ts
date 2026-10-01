@@ -164,8 +164,11 @@ export const shoppingListItems = sqliteTable(
     quantity: real("quantity"),
     unit: text("unit", { enum: UNITS }),
     checked: integer("checked", { mode: "boolean" }).notNull().default(false),
+    // "Déjà au placard" for this list only.
+    removed: integer("removed", { mode: "boolean" }).notNull().default(false),
     manual: integer("manual", { mode: "boolean" }).notNull().default(false),
     freeLabel: text("free_label"),
+    aisle: text("aisle", { enum: AISLES }), // manual items
   },
   (t) => [index("shopping_list_items_plan_idx").on(t.planId)],
 );

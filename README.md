@@ -33,6 +33,12 @@ Tout tourne en local, **sans API payante** : pas de LLM. L'import des recettes r
 - **Historique** des plannings ; l'onglet Planning ouvre celui en cours.
 - Les dates suivent le fuseau `APP_TIMEZONE` (défaut `Europe/Paris`).
 
+## Liste de courses
+
+- Calculée **en direct** depuis le planning (elle suit chaque changement) : ingrédients des repas cuisinés, mis à l'échelle des portions ; les repas « restes » et « extérieur » sont ignorés.
+- **Conversions** : g/kg et ml/cl/l additionnés ; cuillères converties en grammes pour les ingrédients courants (sucre, farine, beurre…), en volume pour les liquides ; unités incompatibles affichées côte à côte (« 400 g + 2 boîtes »). Quantités arrondies vers le haut (on n'achète pas 1,5 oignon).
+- Regroupée **par rayon**, cases à cocher partagées entre téléphones (rafraîchie au retour dans l'appli), articles ajoutés à la main, « déjà au placard » (cette semaine) ou « toujours au placard » (sel, poivre, eau par défaut), « Tout décocher », **partage / copie en texte**.
+
 ## Stack
 
 Next.js 16 (App Router) + TypeScript, Drizzle ORM sur SQLite (`better-sqlite3`), Tailwind CSS 4, zod, Vitest.
@@ -95,6 +101,6 @@ Le port (`PORT`) est fourni par Railway et le cookie de session passe automatiqu
 3. ✅ Import par lien (JSON-LD, puis structure HTML) et par texte collé
 4. ✅ Import par photo (OCR local Tesseract) + écran de relecture
 5. ✅ Planning (génération + édition + historique)
-6. ⬜ Liste de courses (agrégation + conversion + rayons)
+6. ✅ Liste de courses (agrégation + conversion + rayons)
 7. ⬜ Batch cooking (fiche + mode cuisine)
 8. ⬜ Finitions mobile, tests

@@ -71,9 +71,12 @@ export default async function PlanPage({
         </p>
       )}
       <PlanGrid planId={plan.id} entries={entries} recipes={recipes} today={today()} />
-      <p className="mt-4 rounded-2xl border border-dashed border-stone-300 p-3 text-center text-sm text-stone-500">
-        🛒 Liste de courses de ce planning : étape 6
-      </p>
+      <Link
+        href={`/courses/${plan.id}`}
+        className="mt-4 block rounded-2xl bg-brand-600 p-3 text-center font-semibold text-white"
+      >
+        🛒 Liste de courses de ce planning
+      </Link>
     </>
   );
 }

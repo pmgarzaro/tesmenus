@@ -29,6 +29,13 @@
       "when": 1790877289264,
       "tag": "0003_plan_options",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1790878935325,
+      "tag": "0004_shopping_state",
+      "breakpoints": true
     }
   ]
 }

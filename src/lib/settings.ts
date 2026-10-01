@@ -10,6 +10,8 @@ export const settingsSchema = z.object({
   servingsPerRecipe: z.number().int().min(1).max(24),
   // A recipe cooked in the evening covers the next day's lunch.
   dinnerCoversNextLunch: z.boolean(),
+  /** Ingredients always at home: left out of shopping lists. */
+  pantry: z.array(z.string()).max(200),
 });
 
 export type Settings = z.infer<typeof settingsSchema>;
@@ -20,6 +22,7 @@ export const DEFAULT_SETTINGS: Settings = {
   people: 2,
   servingsPerRecipe: 4,
   dinnerCoversNextLunch: true,
+  pantry: ["sel", "poivre", "eau"],
 };
 
 export function getSettings(householdId: number): Settings {
@@ -33,8 +36,8 @@ export function getSettings(householdId: number): Settings {
   return { ...DEFAULT_SETTINGS, ...(parsed.success ? parsed.data : {}) };
 }
 
-export function saveSettings(householdId: number, values: Settings) {
-  const valid = settingsSchema.parse(values);
+export function saveSettings(householdId: number, values: Partial<Settings>) {
+  const valid = settingsSchema.partial().parse(values);
   const db = getDb();
   db.transaction((tx) => {
     for (const [key, value] of Object.entries(valid)) {

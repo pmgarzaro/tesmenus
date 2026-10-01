@@ -25,6 +25,9 @@ describe("normalizeIngredientName", () => {
     ["tomates concassées", "tomates concassées"],
     ["du riz basmati", "riz basmati"],
     ["beurre ou margarine", "beurre"],
+    ["branche de céleri", "céleri"],
+    ["brins de thym", "thym"],
+    ["noix de coco", "noix de coco"],
   ])("%s → %s", (raw, expected) => {
     expect(normalizeIngredientName(raw)).toBe(expected);
   });

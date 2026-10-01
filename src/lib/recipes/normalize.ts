@@ -110,6 +110,8 @@ export function normalizeIngredientName(raw: string): string {
   s = s.split(/[,;]| ou /)[0]; // "oignon, émincé" / "beurre ou margarine"
   for (const re of PREPARATION) s = s.replace(re, " ");
   s = s.replace(/^(de la |de l'|du |des |de |d'|la |le |les |l')/, "");
+  // How it is sold or picked, not what it is: "branche de céleri" → "céleri".
+  s = s.replace(/^(branches?|brins?|tiges?|feuilles?|pincées?|poignées?|morceaux?|cubes?) (de |d')/, "");
   s = s.replace(/\s+/g, " ").trim();
   s = s
     .split(" ")
