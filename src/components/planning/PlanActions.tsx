@@ -1,12 +1,21 @@
 "use client";
 
 import { useTransition } from "react";
-import { deletePlanAction, regeneratePlanAction } from "@/app/(app)/planning/actions";
+import { deletePlanAction, fillEmptyAction, regeneratePlanAction } from "@/app/(app)/planning/actions";
 
-export function PlanActions({ planId }: { planId: number }) {
+export function PlanActions({ planId, emptyCount }: { planId: number; emptyCount: number }) {
   const [pending, start] = useTransition();
   return (
     <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
+      {emptyCount > 0 && (
+        <button
+          disabled={pending}
+          onClick={() => start(() => fillEmptyAction(planId))}
+          className="font-medium text-brand-700 underline disabled:opacity-50"
+        >
+          🎲 Compléter les {emptyCount} repas vides au hasard
+        </button>
+      )}
       <button
         disabled={pending}
         onClick={() => confirm("Remplacer tous les repas par un nouveau tirage ?") && start(() => regeneratePlanAction(planId))}

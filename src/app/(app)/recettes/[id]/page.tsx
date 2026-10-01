@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AddToPlanButton } from "@/components/planning/AddToPlanButton";
 import { DeleteRecipeButton } from "@/components/recipes/DeleteRecipeButton";
 import { ScaledIngredients } from "@/components/recipes/ScaledIngredients";
 import { requireUser } from "@/lib/auth";
 import { MEAL_TYPE_LABELS, STEP_TYPE_LABELS, formatMinutes } from "@/lib/labels";
+import { openPlans } from "@/lib/planning/repo";
 import { getRecipe } from "@/lib/recipes/repo";
 import { totalMinutes } from "@/lib/recipes/search";
 
@@ -36,6 +38,8 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
           ))}
         </div>
       </header>
+
+      {(r.mealType === "plat" || r.mealType === "autre") && <AddToPlanButton recipeId={r.id} plans={openPlans(householdId)} />}
 
       <dl className="grid grid-cols-3 gap-2 rounded-2xl bg-white p-3 text-center shadow-sm">
         {[

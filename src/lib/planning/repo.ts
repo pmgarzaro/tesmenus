@@ -3,7 +3,7 @@ import { getDb, schema } from "@/db";
 import { listRecipeSummaries } from "@/lib/recipes/repo";
 import { totalMinutes } from "@/lib/recipes/search";
 import { getSettings } from "@/lib/settings";
-import { addDays, today } from "./dates";
+import { addDays, dateRange, today } from "./dates";
 import {
   type PlanConstraints,
   type PlanOptions,
@@ -91,7 +91,14 @@ function fillPlan(householdId: number, plan: Plan, seed: number): string[] {
   return warnings;
 }
 
-export type NewPlanInput = { startDate: string; days: number; slots: Slot[]; constraints: PlanConstraints };
+export type NewPlanInput = {
+  startDate: string;
+  days: number;
+  slots: Slot[];
+  constraints: PlanConstraints;
+  /** "manual": every meal starts empty, filled by hand. */
+  mode?: "auto" | "manual";
+};
 
 export function createPlan(householdId: number, input: NewPlanInput): { id: number; warnings: string[] } {
   const s = getSettings(householdId);
@@ -107,6 +114,17 @@ export function createPlan(householdId: number, input: NewPlanInput): { id: numb
     .values({ householdId, startDate: input.startDate, days: input.days, options })
     .returning()
     .get();
+  if (input.mode === "manual") {
+    getDb()
+      .insert(schema.mealPlanEntries)
+      .values(
+        dateRange(input.startDate, input.days).flatMap((date) =>
+          (["midi", "soir"] as const).filter((slot) => input.slots.includes(slot)).map((slot) => ({ planId: plan.id, date, slot })),
+        ),
+      )
+      .run();
+    return { id: plan.id, warnings: [] };
+  }
   return { id: plan.id, warnings: fillPlan(householdId, plan, randomSeed()) };
 }
 
@@ -243,7 +261,69 @@ export function setEntryRecipe(householdId: number, entryId: number, recipeId: n
     sourceEntryId: null,
     servings: recipeId === null ? null : owned.entry.recipeId ? owned.entry.servings : cookingServings(owned.plan, entryId),
   });
+  if (recipeId !== null) linkNextLunch(owned.plan, { ...owned.entry, id: entryId });
   return true;
+}
+
+/**
+ * With the leftovers rule, a dinner also feeds the next day's lunch when that
+ * lunch is still empty (useful when filling a plan by hand).
+ */
+function linkNextLunch(plan: Plan, dinner: { id: number; date: string; slot: string }) {
+  const o = optionsOf(plan);
+  if (dinner.slot !== "soir" || !o.dinnerCoversNextLunch) return;
+  const lunch = getDb()
+    .select()
+    .from(schema.mealPlanEntries)
+    .where(
+      and(
+        eq(schema.mealPlanEntries.planId, plan.id),
+        eq(schema.mealPlanEntries.date, addDays(dinner.date, 1)),
+        eq(schema.mealPlanEntries.slot, "midi"),
+      ),
+    )
+    .get();
+  if (!lunch || lunch.recipeId || lunch.isLeftover || lunch.isEatingOut) return;
+  update(lunch.id, { isLeftover: true, sourceEntryId: dinner.id, recipeId: null, servings: null });
+  const current = getDb().select().from(schema.mealPlanEntries).where(eq(schema.mealPlanEntries.id, dinner.id)).get();
+  if (current && (current.servings ?? 0) < o.servingsPerRecipe) update(dinner.id, { servings: o.servingsPerRecipe });
+}
+
+/**
+ * Fills only the empty meals at random (dinners first, so their leftovers can
+ * cover the next lunches), keeping everything chosen by hand.
+ */
+export function fillEmptyEntries(householdId: number, planId: number): string[] | null {
+  const warnings: string[] = [];
+  for (const slot of ["soir", "midi"] as const) {
+    const plan = getPlan(householdId, planId);
+    if (!plan) return null;
+    const isEmpty = (e: PlanEntryView) => !e.recipeId && !e.isLeftover && !e.isEatingOut;
+    const targets = plan.entries.filter((e) => isEmpty(e) && e.slot === slot);
+    if (targets.length === 0) continue;
+    const fixed: Record<string, number | null> = {};
+    for (const e of plan.entries) {
+      if (targets.includes(e)) continue;
+      // Leftover meals count as their source recipe, so it is not picked again.
+      fixed[cellKey(e.date, e.slot)] = e.isLeftover ? null : e.recipeId;
+    }
+    const generated = generatePlan(
+      {
+        ...plan.options,
+        dinnerCoversNextLunch: false,
+        fixed,
+        recentRecipeIds: recentRecipeIds(householdId, plan.startDate, plan.id),
+        seed: randomSeed(),
+      },
+      plannerRecipes(householdId),
+    );
+    warnings.push(...generated.warnings);
+    for (const t of targets) {
+      const picked = generated.entries.find((e) => e.date === t.date && e.slot === t.slot)?.recipeId;
+      if (picked) setEntryRecipe(householdId, t.id, picked);
+    }
+  }
+  return [...new Set(warnings)];
 }
 
 export function setEatingOut(householdId: number, entryId: number): boolean {
@@ -317,3 +397,29 @@ export function swapEntries(householdId: number, aId: number, bId: number): bool
   return true;
 }
 
+
+/** Plans not finished yet, with what each meal currently holds (for "add to plan"). */
+export function openPlans(householdId: number) {
+  const t = today();
+  return listPlans(householdId)
+    .filter((p) => addDays(p.startDate, p.days - 1) >= t)
+    .reverse()
+    .map((p) => {
+      const full = getPlan(householdId, p.id)!;
+      return {
+        id: p.id,
+        startDate: p.startDate,
+        days: p.days,
+        entries: full.entries.map((e) => ({
+          id: e.id,
+          date: e.date,
+          slot: e.slot,
+          content: e.isEatingOut
+            ? "Repas extérieur"
+            : e.isLeftover && e.recipe
+              ? `Restes : ${e.recipe.title}`
+              : (e.recipe?.title ?? null),
+        })),
+      };
+    });
+}

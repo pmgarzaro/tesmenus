@@ -28,6 +28,7 @@ export function NewPlanForm({
   const [query, setQuery] = useState("");
   const [onlyFreezable, setOnlyFreezable] = useState(false);
   const [excludeTags, setExcludeTags] = useState<string[]>([]);
+  const [mode, setMode] = useState<"auto" | "manual">("auto");
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
@@ -50,6 +51,7 @@ export function NewPlanForm({
         include,
         onlyFreezable,
         excludeTags,
+        mode,
       });
       if (err) setError(err);
     });
@@ -57,6 +59,27 @@ export function NewPlanForm({
 
   return (
     <form onSubmit={submit} className="space-y-4">
+      <div role="radiogroup" aria-label="Remplissage" className="grid grid-cols-2 gap-2">
+        {(
+          [
+            ["auto", "🎲 Automatique", "L'appli choisit les repas, tu ajustes ensuite."],
+            ["manual", "✍️ Je remplis moi-même", "Planning vide, tu choisis chaque repas."],
+          ] as const
+        ).map(([value, label, hint]) => (
+          <button
+            type="button"
+            key={value}
+            role="radio"
+            aria-checked={mode === value}
+            onClick={() => setMode(value)}
+            className={`rounded-2xl border-2 p-3 text-left ${mode === value ? "border-brand-600 bg-brand-50" : "border-stone-200 bg-white"}`}
+          >
+            <span className="block font-semibold">{label}</span>
+            <span className="block text-xs text-stone-500">{hint}</span>
+          </button>
+        ))}
+      </div>
+
       <section className={box}>
         <div className="grid grid-cols-2 gap-3">
           <label className="text-sm text-stone-600">
@@ -80,7 +103,9 @@ export function NewPlanForm({
       </section>
 
       <section className={box}>
-        <h2 className="font-semibold">Contraintes (facultatif)</h2>
+        <h2 className="font-semibold">
+          {mode === "auto" ? "Contraintes (facultatif)" : "Contraintes pour « Compléter au hasard » (facultatif)"}
+        </h2>
         <details className="text-sm">
           <summary className="cursor-pointer text-stone-700">Temps maximum par jour</summary>
           <ul className="mt-2 space-y-1.5">
@@ -180,7 +205,7 @@ export function NewPlanForm({
 
       {error && <p className="text-sm text-red-600">{error}</p>}
       <button disabled={pending || slots.length === 0} className="w-full rounded-xl bg-brand-600 py-3 font-semibold text-white disabled:opacity-60">
-        {pending ? "Génération…" : "Générer le planning"}
+        {pending ? "Création…" : mode === "auto" ? "Générer le planning" : "Créer le planning vide"}
       </button>
     </form>
   );

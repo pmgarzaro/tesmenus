@@ -155,7 +155,8 @@ function CellSheet({
   onAction: (a: CellAction, close?: boolean) => void;
   onSwap: () => void;
 }) {
-  const [picking, setPicking] = useState(false);
+  // An empty meal opens straight on the recipe list.
+  const [picking, setPicking] = useState(!e.recipe && !e.isEatingOut);
   const [query, setQuery] = useState("");
   const [servings, setServings] = useState(e.servings ?? 2);
   const cooks = !e.isLeftover && !e.isEatingOut && e.recipe;
@@ -205,7 +206,9 @@ function CellSheet({
               ))}
               {shown.length === 0 && <li className="py-3 text-center text-sm text-stone-500">Aucune recette.</li>}
             </ul>
-            <button onClick={() => setPicking(false)} className="w-full py-2 text-stone-500">Retour</button>
+            <button onClick={() => setPicking(false)} className="w-full py-2 text-stone-500">
+              {e.recipe || e.isEatingOut ? "Retour" : "Autres options (hasard, restes, repas extérieur…)"}
+            </button>
           </div>
         ) : (
           <div className="space-y-2">

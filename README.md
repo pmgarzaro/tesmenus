@@ -27,6 +27,7 @@ Tout tourne en local, **sans API payante** : pas de LLM. L'import des recettes r
 ## Planning
 
 - **Génération** (code déterministe, sans IA) : le soir on cuisine pour plusieurs repas (réglage « portions par recette ») et le midi suivant mange les restes ; le premier midi est cuisiné pour le foyer. Pas de recette répétée sur la période, celles de la semaine précédente évitées, alternance viande / poisson / végé (d'après les tags), préférence pour les recettes qui partagent des ingrédients. Plusieurs tirages sont comparés et le meilleur est gardé.
+- **Deux modes** à la création : *Automatique*, ou *Je remplis moi-même* (planning vide). En remplissant à la main, un dîner couvre automatiquement le midi suivant s'il est libre ; « Compléter les repas vides au hasard » ne remplit que les cases restantes. Depuis une fiche recette, « Ajouter au planning » la place sur un repas.
 - **Contraintes** à la création : temps maximum par jour, recettes à inclure, uniquement des plats congelables, tags à éviter.
 - **Édition** d'un repas : autre recette au hasard, choix dans la bibliothèque, échange avec un autre repas, restes d'un repas précédent, repas extérieur, portions ; « Tout relancer » pour la semaine entière.
 - **Historique** des plannings ; l'onglet Planning ouvre celui en cours.

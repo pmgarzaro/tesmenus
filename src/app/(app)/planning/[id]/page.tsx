@@ -42,6 +42,7 @@ export default async function PlanPage({
     recipe: e.recipe && { id: e.recipe.id, title: e.recipe.title, tags: e.recipe.tags, minutes: totalMinutes(e.recipe) },
   }));
   const cooked = entries.filter((e) => e.recipe && !e.isLeftover).length;
+  const empty = entries.filter((e) => !e.recipe && !e.isEatingOut).length;
 
   return (
     <>
@@ -55,13 +56,19 @@ export default async function PlanPage({
         </h1>
         <p className="text-sm text-stone-500">
           {cooked} repas à cuisiner · {entries.filter((e) => e.isLeftover).length} repas de restes
+          {empty > 0 && ` · ${empty} à choisir`}
         </p>
-        <PlanActions planId={plan.id} />
+        <PlanActions planId={plan.id} emptyCount={empty} />
       </header>
       {warnings.length > 0 && (
         <div className="mb-3 space-y-1 rounded-2xl bg-amber-50 p-3 text-sm text-amber-800">
           {warnings.map((w) => <p key={w}>⚠️ {w}</p>)}
         </div>
+      )}
+      {empty === entries.length && (
+        <p className="mb-3 rounded-2xl bg-brand-50 p-3 text-sm text-brand-800">
+          Touche un repas pour choisir sa recette, ou ajoute des recettes depuis leur fiche (« Ajouter au planning »).
+        </p>
       )}
       <PlanGrid planId={plan.id} entries={entries} recipes={recipes} today={today()} />
       <p className="mt-4 rounded-2xl border border-dashed border-stone-300 p-3 text-center text-sm text-stone-500">

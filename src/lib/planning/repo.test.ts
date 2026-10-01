@@ -104,6 +104,42 @@ describe("plans", () => {
     expect(plans.getPlan(h, id)).toBeNull();
   });
 
+  it("creates an empty plan to fill by hand, with leftovers linked automatically", () => {
+    const { id, warnings } = plans.createPlan(h, { ...input, startDate: "2026-11-09", mode: "manual" });
+    expect(warnings).toEqual([]);
+    let p = plans.getPlan(h, id)!;
+    expect(p.entries).toHaveLength(10);
+    expect(p.entries.every((e) => !e.recipeId && !e.isLeftover && !e.isEatingOut)).toBe(true);
+
+    const recipes = getDb().select().from(schema.recipes).all().filter((r) => r.householdId === h);
+    const monDinner = cell(p, "2026-11-09", "soir");
+    expect(plans.setEntryRecipe(h, monDinner.id, recipes[0].id)).toBe(true);
+    p = plans.getPlan(h, id)!;
+    expect(cell(p, "2026-11-10", "midi")).toMatchObject({ isLeftover: true, sourceEntryId: monDinner.id });
+    expect(cell(p, "2026-11-09", "soir").servings).toBe(4);
+
+    // A lunch already chosen is not overwritten.
+    const wedLunch = cell(p, "2026-11-11", "midi");
+    plans.setEntryRecipe(h, wedLunch.id, recipes[1].id);
+    plans.setEntryRecipe(h, cell(p, "2026-11-10", "soir").id, recipes[2].id);
+    p = plans.getPlan(h, id)!;
+    expect(cell(p, "2026-11-11", "midi")).toMatchObject({ recipeId: recipes[1].id, isLeftover: false });
+    expect(cell(p, "2026-11-10", "soir").servings).toBe(2);
+
+    // Friday evening out, then complete the rest at random.
+    plans.setEatingOut(h, cell(p, "2026-11-13", "soir").id);
+    const chosen = p.entries.filter((e) => e.recipeId).map((e) => [e.id, e.recipeId]);
+    expect(plans.fillEmptyEntries(h, id)).toEqual([]);
+    p = plans.getPlan(h, id)!;
+    for (const [eid, rid] of chosen) expect(p.entries.find((e) => e.id === eid)!.recipeId).toBe(rid);
+    expect(cell(p, "2026-11-13", "soir").isEatingOut).toBe(true);
+    expect(p.entries.filter((e) => !e.recipeId && !e.isLeftover && !e.isEatingOut)).toEqual([]);
+    expect(cell(p, "2026-11-12", "midi").isLeftover).toBe(true); // Wednesday dinner feeds Thursday lunch
+    const cookedIds = p.entries.filter((e) => e.recipeId && !e.isLeftover).map((e) => e.recipeId);
+    expect(new Set(cookedIds).size).toBe(cookedIds.length);
+    expect(plans.fillEmptyEntries(other, id)).toBeNull();
+  });
+
   it("regenerates a whole plan", () => {
     const { id } = plans.createPlan(h, { ...input, startDate: "2026-11-02" });
     expect(plans.regeneratePlan(h, id)).toEqual([]);

@@ -16,6 +16,7 @@ const newPlanSchema = z.object({
   include: z.array(z.number().int()).max(14),
   onlyFreezable: z.boolean(),
   excludeTags: z.array(z.string().max(40)).max(20),
+  mode: z.enum(["auto", "manual"]),
 });
 
 export type NewPlanPayload = z.infer<typeof newPlanSchema>;
@@ -30,6 +31,7 @@ export async function createPlanAction(payload: NewPlanPayload): Promise<string>
     startDate: p.startDate,
     days: p.days,
     slots: p.slots,
+    mode: p.mode,
     constraints: {
       maxMinutesByDate: Object.fromEntries(Object.entries(p.maxMinutesByDate).filter(([d]) => dates.has(d))),
       include: p.include,
@@ -81,6 +83,13 @@ export async function editCell(planId: number, entryId: number, action: CellActi
 export async function regeneratePlanAction(planId: number): Promise<void> {
   const { householdId } = await requireUser();
   const warnings = plans.regeneratePlan(householdId, planId) ?? [];
+  revalidatePath(`/planning/${planId}`);
+  redirect(`/planning/${planId}${warnings.length ? `?w=${encodeURIComponent(JSON.stringify(warnings))}` : ""}`);
+}
+
+export async function fillEmptyAction(planId: number): Promise<void> {
+  const { householdId } = await requireUser();
+  const warnings = plans.fillEmptyEntries(householdId, planId) ?? [];
   revalidatePath(`/planning/${planId}`);
   redirect(`/planning/${planId}${warnings.length ? `?w=${encodeURIComponent(JSON.stringify(warnings))}` : ""}`);
 }
