@@ -13,7 +13,7 @@ export type SeedRecipe = {
   tags: string[];
   fridgeDays: number;
   freezable: boolean;
-  // [nom normalisé, rayon, quantité, unité, libellé original]
+  // [nom normalisé, rayon, quantité, unité, ligne telle qu'écrite]
   ingredients: [string, Aisle, number | null, Unit | null, string][];
   // [texte, durée min, type, équipement, température]
   steps: [string, number | null, (typeof STEP_TYPES)[number], string | null, number | null][];

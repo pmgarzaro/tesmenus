@@ -15,6 +15,13 @@
       "when": 1790870731884,
       "tag": "0001_households",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1790871435288,
+      "tag": "0002_seed_labels",
+      "breakpoints": true
     }
   ]
 }

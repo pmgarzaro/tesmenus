@@ -1,36 +1,73 @@
-import { asc, eq } from "drizzle-orm";
+import Link from "next/link";
+import { Suspense } from "react";
 import { PageHeader } from "@/components/PageHeader";
-import { getDb, schema } from "@/db";
+import { AddRecipeButton } from "@/components/recipes/AddRecipeButton";
+import { LibraryFilters } from "@/components/recipes/LibraryFilters";
+import { MEAL_TYPES } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
+import { formatMinutes } from "@/lib/labels";
+import { listRecipeSummaries } from "@/lib/recipes/repo";
+import { type RecipeFilters, filterRecipes, tagCounts, totalMinutes } from "@/lib/recipes/search";
 
 export const dynamic = "force-dynamic";
 
-// Temporary list to check the database; the full library comes in step 2.
-export default async function RecipesPage() {
+type Search = { q?: string; tag?: string | string[]; type?: string; max?: string; congelable?: string };
+
+function parseFilters(s: Search): RecipeFilters {
+  return {
+    q: s.q,
+    tags: s.tag === undefined ? [] : [s.tag].flat(),
+    mealType: MEAL_TYPES.find((t) => t === s.type),
+    maxMinutes: Number(s.max) || undefined,
+    freezable: s.congelable === "1",
+  };
+}
+
+export default async function RecipesPage({ searchParams }: { searchParams: Promise<Search> }) {
   const { householdId } = await requireUser();
-  const recipes = getDb()
-    .select({ id: schema.recipes.id, title: schema.recipes.title, tags: schema.recipes.tags })
-    .from(schema.recipes)
-    .where(eq(schema.recipes.householdId, householdId))
-    .orderBy(asc(schema.recipes.title))
-    .all();
+  const all = listRecipeSummaries(householdId);
+  const recipes = filterRecipes(all, parseFilters(await searchParams));
+  const tags = tagCounts(all).map((t) => t.tag);
+
   return (
     <>
-      <PageHeader title="Recettes" />
-      {recipes.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-stone-300 p-6 text-center text-stone-500">
-          Aucune recette. Chargez les exemples depuis les Réglages.
-        </p>
+      <PageHeader title="Recettes" action={<span className="text-sm text-stone-500">{all.length} au total</span>} />
+      {all.length === 0 ? (
+        <div className="space-y-3 rounded-2xl border border-dashed border-stone-300 p-6 text-center text-stone-500">
+          <p>Ta bibliothèque est vide.</p>
+          <p>
+            Ajoute une recette avec le bouton <strong>+</strong>, ou charge les exemples depuis les{" "}
+            <Link href="/reglages" className="text-brand-700 underline">Réglages</Link>.
+          </p>
+        </div>
       ) : (
-        <ul className="divide-y divide-stone-200 rounded-2xl bg-white shadow-sm">
-          {recipes.map((r) => (
-            <li key={r.id} className="flex items-center justify-between px-4 py-3">
-              <span className="font-medium">{r.title}</span>
-              <span className="text-xs text-stone-500">{r.tags.join(" · ")}</span>
-            </li>
-          ))}
-        </ul>
+        <>
+          <Suspense>
+            <LibraryFilters tags={tags} />
+          </Suspense>
+          {recipes.length === 0 ? (
+            <p className="p-6 text-center text-stone-500">Aucune recette ne correspond.</p>
+          ) : (
+            <ul className="space-y-2">
+              {recipes.map((r) => (
+                <li key={r.id}>
+                  <Link href={`/recettes/${r.id}`} className="block rounded-2xl bg-white px-4 py-3 shadow-sm active:bg-stone-50">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="font-medium">{r.title}</span>
+                      <span className="shrink-0 text-sm text-stone-500">
+                        {formatMinutes(totalMinutes(r))}
+                        {r.freezable && " · ❄️"}
+                      </span>
+                    </div>
+                    {r.tags.length > 0 && <p className="mt-0.5 text-xs text-stone-500">{r.tags.join(" · ")}</p>}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
       )}
+      <AddRecipeButton />
     </>
   );
 }

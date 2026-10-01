@@ -71,7 +71,7 @@ Le port (`PORT`) est fourni par Railway et le cookie de session passe automatiqu
 ## Avancement
 
 1. ✅ Squelette Next.js + SQLite + schéma + comptes et foyers + Docker / Railway
-2. ⬜ CRUD recettes manuel + bibliothèque
+2. ✅ CRUD recettes manuel + bibliothèque (recherche, filtres, portions)
 3. ⬜ Import par URL (JSON-LD puis heuristique HTML)
 4. ⬜ Import par photo (OCR local) + écran de relecture
 5. ⬜ Planning (génération + édition)
