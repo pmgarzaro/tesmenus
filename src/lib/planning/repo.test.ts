@@ -147,3 +147,26 @@ describe("plans", () => {
     expect(plans.regeneratePlan(other, id)).toBeNull();
   });
 });
+
+describe("settings sync", () => {
+  it("turning leftovers off replaces upcoming leftover meals", async () => {
+    const { saveSettings } = await import("@/lib/settings");
+    const c = getDb().insert(schema.households).values({ name: "C" }).returning().get().id;
+    seedIfEmpty(c);
+    const start = (await import("./dates")).addDays((await import("./dates")).today(), 1);
+    const { id } = plans.createPlan(c, { ...input, startDate: start });
+    expect(plans.getPlan(c, id)!.entries.some((e) => e.isLeftover)).toBe(true);
+
+    saveSettings(c, { dinnerCoversNextLunch: false });
+    expect(plans.syncOpenPlansWithSettings(c)).toBe(1);
+    const p = plans.getPlan(c, id)!;
+    expect(p.entries.some((e) => e.isLeftover)).toBe(false);
+    expect(p.entries.every((e) => e.recipeId !== null)).toBe(true);
+    expect(p.entries.every((e) => e.servings === 2)).toBe(true);
+    expect(p.options.dinnerCoversNextLunch).toBe(false);
+
+    // Regenerating now follows the new setting.
+    plans.regeneratePlan(c, id);
+    expect(plans.getPlan(c, id)!.entries.some((e) => e.isLeftover)).toBe(false);
+  });
+});
