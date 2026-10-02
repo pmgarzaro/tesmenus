@@ -32,7 +32,7 @@ export default async function BatchSheetPage({ params }: { params: Promise<{ id:
     <article className="space-y-4">
       <Link href="/batch" className="text-sm text-stone-500 print:hidden">← Batch cooking</Link>
       <header className="space-y-2">
-        <h1 className="font-hand text-[2.4rem] font-bold leading-none">Session du {longDate(s.sessionDate)}</h1>
+        <h1 className="font-display text-3xl font-bold leading-tight">Session du {longDate(s.sessionDate)}</h1>
         <ul className="flex flex-wrap gap-1.5">
           {s.dishes.map((d) => (
             <li key={d.key} className="flex items-center gap-1.5 rounded-full bg-stone-100 px-2.5 py-0.5 text-sm">

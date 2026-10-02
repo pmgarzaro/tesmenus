@@ -8,11 +8,14 @@ type Ingredient = { quantity: number | null; unit: Unit | null; label: string; o
 /** Ingredient list with a portions stepper that rescales quantities. */
 export function ScaledIngredients({ servings, ingredients }: { servings: number; ingredients: Ingredient[] }) {
   const [target, setTarget] = useState(servings);
-  const btn = "flex size-9 items-center justify-center rounded-full border border-black/15 bg-white/70 text-lg disabled:opacity-30";
+  const btn = "flex size-9 items-center justify-center rounded-full bg-door text-lg disabled:opacity-30";
   return (
-    <section className="postit note-yellow magnet magnet-red p-4 pt-5">
+    <section className="paper p-4">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h2 className="font-semibold">Ingrédients</h2>
+        <h2 className="flex items-center gap-2.5">
+          <span className="magnet magnet-green" aria-hidden="true" />
+          Ingrédients
+        </h2>
         <div className="flex items-center gap-2">
           <button className={btn} onClick={() => setTarget(target - 1)} disabled={target <= 1} aria-label="Moins de portions">−</button>
           <span className="min-w-24 text-center text-sm">
