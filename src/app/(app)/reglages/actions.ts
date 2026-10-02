@@ -6,6 +6,7 @@ import { getDb, schema } from "@/db";
 import { testAi } from "@/lib/ai/gemini";
 import { createInvite, requireUser } from "@/lib/auth";
 import { MIN_PASSWORD_LENGTH, hashPassword, verifyPassword } from "@/lib/password";
+import { syncOpenPlansWithSettings } from "@/lib/planning/repo";
 import { saveSettings } from "@/lib/settings";
 
 export async function updateSettings(_prev: string | null, form: FormData): Promise<string | null> {
@@ -21,8 +22,13 @@ export async function updateSettings(_prev: string | null, form: FormData): Prom
   } catch {
     return "Valeurs invalides";
   }
+  const updated = syncOpenPlansWithSettings(user.householdId);
   revalidatePath("/reglages");
-  return "Réglages enregistrés";
+  revalidatePath("/planning");
+  revalidatePath("/courses");
+  return updated > 0
+    ? `Réglages enregistrés — restes remplacés dans ${updated} planning${updated > 1 ? "s" : ""} en cours`
+    : "Réglages enregistrés";
 }
 
 export async function loadSampleRecipes(): Promise<void> {

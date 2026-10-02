@@ -1,3 +1,4 @@
+import { Refrigerator, Snowflake } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 import { PageHeader } from "@/components/PageHeader";
@@ -7,6 +8,7 @@ import { MEAL_TYPES } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { formatMinutes } from "@/lib/labels";
 import { magnetForTags } from "@/lib/notes";
+import { kcalPerServingByRecipe } from "@/lib/nutrition/repo";
 import { listRecipeSummaries } from "@/lib/recipes/repo";
 import { type RecipeFilters, filterRecipes, tagCounts, totalMinutes } from "@/lib/recipes/search";
 
@@ -29,6 +31,7 @@ export default async function RecipesPage({ searchParams }: { searchParams: Prom
   const all = listRecipeSummaries(householdId);
   const recipes = filterRecipes(all, parseFilters(await searchParams));
   const tags = tagCounts(all).map((t) => t.tag);
+  const kcal = kcalPerServingByRecipe(householdId);
 
   return (
     <>
@@ -37,7 +40,7 @@ export default async function RecipesPage({ searchParams }: { searchParams: Prom
         action={
           all.length > 0 && (
             <Link href="/recettes/vide-frigo" className="flex min-h-11 items-center gap-1.5 rounded-xl bg-white px-3 font-display font-semibold shadow-[0_1px_2px_rgb(0_0_0/0.06)]">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M12 2v20M4 6l16 12M20 6L4 18" /></svg>
+              <Refrigerator className="size-4" aria-hidden />
               Vide-frigo
             </Link>
           )
@@ -72,15 +75,18 @@ export default async function RecipesPage({ searchParams }: { searchParams: Prom
                         {r.title.charAt(0)}
                       </span>
                       <span className="flex min-w-0 flex-1 flex-col justify-between gap-2">
-                        <span className="font-extrabold leading-tight [overflow-wrap:anywhere]">{r.title}</span>
+                        <span className="flex flex-col gap-0.5">
+                          <span className="font-extrabold leading-tight [overflow-wrap:anywhere]">{r.title}</span>
+                          {kcal.has(r.id) && (
+                            <span className="text-xs text-stone-600">≈ {Math.round(kcal.get(r.id)!)} kcal / portion</span>
+                          )}
+                        </span>
                         <span className="flex items-end justify-between gap-1 text-xs text-stone-600">
                           <span className="min-w-0 truncate">{r.tags.slice(0, 2).join(" · ")}</span>
                           <span className="flex shrink-0 items-center gap-1 font-semibold">
                             {formatMinutes(totalMinutes(r))}
                             {r.freezable && (
-                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" className="text-magnet-blue-dark" role="img" aria-label="congelable">
-                                <path d="M12 2v20M4 6l16 12M20 6L4 18" />
-                              </svg>
+                              <Snowflake className="size-3.5 text-magnet-blue-dark" strokeWidth={2.2} aria-label="congelable" />
                             )}
                           </span>
                         </span>

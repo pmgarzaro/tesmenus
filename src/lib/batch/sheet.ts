@@ -175,7 +175,7 @@ function conservation(d: BatchDish, sessionDate: string): Conservation {
       } else {
         storage = "attention";
         advice.push(
-          `⚠️ Ne se congèle pas et se garde ${limit} jours : la portion du ${late.map(shortDate).join(", ")} serait trop tard. Cuisine-la plus près de la date ou change le planning.`,
+          `Ne se congèle pas et se garde ${limit} jours : la portion du ${late.map(shortDate).join(", ")} serait trop tard. Cuisine-la plus près de la date ou change le planning.`,
         );
       }
     }

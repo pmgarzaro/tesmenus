@@ -36,6 +36,20 @@
       "when": 1790878935325,
       "tag": "0004_shopping_state",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1790931929830,
+      "tag": "0005_ingredient_nutrition",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1790932300384,
+      "tag": "0006_plan_templates",
+      "breakpoints": true
     }
   ]
 }

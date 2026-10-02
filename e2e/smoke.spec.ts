@@ -23,19 +23,44 @@ test("parcours principal", async ({ page }) => {
   await page.getByText("Saisie manuelle").click();
   await page.getByPlaceholder("Titre de la recette").fill("Omelette");
   await page.getByText("Coller une liste").click();
-  await page.getByPlaceholder(/Un ingrédient par ligne/).fill("4 œufs\n1 pincée de sel");
+  await page.getByPlaceholder(/Un ingrédient par ligne/).fill("4 œufs\n1 pincée de sel\n20 g de poudre de perlimpinpin");
   await page.getByText("Ajouter ces ingrédients").click();
   await page.getByLabel("Étape 1").fill("Battre les œufs et cuire 3 min à la poêle.");
   await page.getByRole("button", { name: "Enregistrer" }).click();
   await expect(page.getByRole("heading", { name: "Omelette" })).toBeVisible();
   await expect(page.getByText("4 œufs")).toBeVisible();
 
+  // Calories: an unknown ingredient filled by hand counts in the total
+  await expect(page.getByText("aliment inconnu")).toBeVisible();
+  const before = Number((await page.getByTestId("kcal").textContent())!.replace(/\D/g, ""));
+  await page.getByRole("button", { name: "Renseigner" }).click();
+  await page.getByLabel("Calories (kcal)").fill("500");
+  await page.getByLabel("Protéines (g)").fill("10");
+  await page.locator("form").getByRole("button", { name: "Enregistrer" }).click();
+  await expect(page.getByText("aliment inconnu")).toHaveCount(0);
+  // 20 g at 500 kcal / 100 g = 100 kcal for 4 portions
+  await expect(page.getByTestId("kcal")).toHaveText(new RegExp(`≈ (${before + 24}|${before + 25}|${before + 26}) kcal`));
+
   // Weekly plan
   await page.goto("/planning/nouveau");
   await page.locator("input[type=date]").fill("2026-10-05");
   await page.getByRole("button", { name: "Générer le planning" }).click();
   await expect(page).toHaveURL(/\/planning\/\d+/);
-  await expect(page.getByText("♻️ Restes").first()).toBeVisible();
+  await expect(page.getByText(/^Restes : /).first()).toBeVisible();
+
+  // Saved as a template, then reused another week
+  const planUrl = page.url();
+  await page.getByRole("button", { name: "Sauvegarder comme modèle" }).click();
+  await page.getByLabel("Nom du modèle").fill("Semaine type");
+  await page.getByRole("button", { name: "Sauver" }).click();
+  await expect(page.getByText("Modèle « Semaine type » enregistré")).toBeVisible();
+  await page.goto("/planning/historique");
+  await page.getByRole("button", { name: /^Semaine type \d+ jours/ }).click();
+  await page.getByLabel("À partir du").fill("2026-10-19");
+  await page.getByRole("button", { name: "Utiliser" }).click();
+  await expect(page.getByText(/^Du 19 octobre/)).toBeVisible();
+  await expect(page.getByText(/^Restes : /).first()).toBeVisible();
+  await page.goto(planUrl);
 
   // Shopping list
   await page.getByText("Liste de courses de ce planning").click();
@@ -54,6 +79,6 @@ test("parcours principal", async ({ page }) => {
   await expect(page.getByText("3. Déroulé")).toBeVisible();
   await page.getByText("Mode cuisine").click();
   await expect(page.getByText(/Étape 1\//)).toBeVisible();
-  await page.getByRole("button", { name: "Suivant →" }).click();
+  await page.getByRole("button", { name: "Suivant" }).click();
   await expect(page.getByText(/Étape 2\//)).toBeVisible();
 });

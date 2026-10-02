@@ -166,7 +166,7 @@ export type ExportList = {
 
 /** Plain text for copy-paste / sharing, grouped by aisle. */
 export function toText(list: ExportList): string {
-  const out = [`🛒 ${list.title}`];
+  const out = [list.title];
   for (const aisle of AISLE_ORDER) {
     const items = list.items.filter((i) => i.aisle === aisle);
     if (items.length === 0) continue;

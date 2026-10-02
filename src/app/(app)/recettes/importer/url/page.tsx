@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { BackLink } from "@/components/BackLink";
 import { PageHeader } from "@/components/PageHeader";
 import { ImportFlow } from "@/components/recipes/ImportFlow";
 import { requireUser } from "@/lib/auth";
@@ -15,7 +15,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ u
   const sharedUrl = params.url || params.text?.match(/https?:\/\/\S+/)?.[0];
   return (
     <>
-      <Link href="/recettes" className="text-sm text-stone-500">← Recettes</Link>
+      <BackLink href="/recettes">Recettes</BackLink>
       <PageHeader title="Importer depuis un lien" />
       <ImportFlow mode="url" allTags={allTags} initialUrl={sharedUrl} />
     </>

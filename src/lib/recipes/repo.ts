@@ -138,6 +138,12 @@ export function getRecipe(householdId: number, id: number) {
       optional: schema.recipeIngredients.optional,
       name: schema.ingredients.name,
       aisle: schema.ingredients.aisle,
+      kcal: schema.ingredients.kcal,
+      protein: schema.ingredients.protein,
+      carbs: schema.ingredients.carbs,
+      fat: schema.ingredients.fat,
+      gramsPerUnit: schema.ingredients.gramsPerUnit,
+      nutritionSource: schema.ingredients.nutritionSource,
     })
     .from(schema.recipeIngredients)
     .innerJoin(schema.ingredients, eq(schema.ingredients.id, schema.recipeIngredients.ingredientId))

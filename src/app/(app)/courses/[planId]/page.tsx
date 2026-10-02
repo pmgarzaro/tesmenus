@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { BackLink } from "@/components/BackLink";
 import { notFound } from "next/navigation";
 import { MagnetTitle } from "@/components/MagnetTitle";
 import { ShoppingList } from "@/components/shopping/ShoppingList";
@@ -16,7 +16,7 @@ export default async function ShoppingPage({ params }: { params: Promise<{ planI
   const period = `du ${longDate(plan.startDate)} au ${longDate(addDays(plan.startDate, plan.days - 1))}`;
   return (
     <>
-      <Link href={`/planning/${plan.id}`} className="text-sm text-stone-500">← Planning {period}</Link>
+      <BackLink href={`/planning/${plan.id}`}>Planning {period}</BackLink>
       <div className="mb-4 mt-2">
         <MagnetTitle text="Courses" />
       </div>

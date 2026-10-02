@@ -83,6 +83,14 @@ export const ingredients = sqliteTable(
     householdId: householdId(),
     name: text("name").notNull(), // normalised name, e.g. "oignon"
     aisle: text("aisle", { enum: AISLES }).notNull().default("autre"),
+    // Nutrition per 100 g, filled by hand or by the AI when the built-in table
+    // does not know the ingredient. gramsPerUnit: weight of one piece.
+    kcal: real("kcal"),
+    protein: real("protein"),
+    carbs: real("carbs"),
+    fat: real("fat"),
+    gramsPerUnit: real("grams_per_unit"),
+    nutritionSource: text("nutrition_source", { enum: ["manuel", "ia"] }),
   },
   (t) => [uniqueIndex("ingredients_household_name_idx").on(t.householdId, t.name)],
 );
@@ -131,6 +139,27 @@ export const mealPlans = sqliteTable("meal_plans", {
   days: integer("days").notNull(),
   // Generation settings (slots, servings, constraints…) reused by rerolls.
   options: text("options", { mode: "json" }).$type<Record<string, unknown>>().notNull().default(sql`'{}'`),
+  createdAt: createdAt(),
+});
+
+/** A saved week, reusable at any start date. Days are 0-based offsets. */
+export type TemplateEntry = {
+  day: number;
+  slot: (typeof SLOTS)[number];
+  recipeId: number | null;
+  servings: number | null;
+  isEatingOut: boolean;
+  /** Cell whose leftovers cover this meal. */
+  leftoverOf: { day: number; slot: (typeof SLOTS)[number] } | null;
+};
+
+export const planTemplates = sqliteTable("plan_templates", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  householdId: householdId(),
+  name: text("name").notNull(),
+  days: integer("days").notNull(),
+  slots: text("slots", { mode: "json" }).$type<(typeof SLOTS)[number][]>().notNull(),
+  entries: text("entries", { mode: "json" }).$type<TemplateEntry[]>().notNull(),
   createdAt: createdAt(),
 });
 

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { BackLink } from "@/components/BackLink";
 import { PageHeader } from "@/components/PageHeader";
 import { ImportFlow } from "@/components/recipes/ImportFlow";
 import { requireUser } from "@/lib/auth";
@@ -12,7 +12,7 @@ export default async function Page() {
   const allTags = tagCounts(listRecipeSummaries(householdId)).map((t) => t.tag);
   return (
     <>
-      <Link href="/recettes" className="text-sm text-stone-500">← Recettes</Link>
+      <BackLink href="/recettes">Recettes</BackLink>
       <PageHeader title="Coller un texte" />
       <ImportFlow mode="text" allTags={allTags} />
     </>

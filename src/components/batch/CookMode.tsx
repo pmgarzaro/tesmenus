@@ -1,5 +1,6 @@
 "use client";
 
+import { AlarmClock, Check, ChefHat, ChevronLeft, ChevronRight, Hourglass, MoonStar, Sun, Timer, X } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { clock } from "@/lib/batch/format";
@@ -129,11 +130,15 @@ export function CookMode({ id, sheet }: { id: number; sheet: BatchSheet }) {
   return (
     <div className="mx-auto flex min-h-dvh max-w-2xl flex-col px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3">
       <header className="mb-3 flex items-center justify-between text-sm text-stone-500">
-        <Link href={`/batch/${id}`} className="rounded-lg px-2 py-1">✕ Quitter</Link>
+        <Link href={`/batch/${id}`} className="inline-flex items-center gap-1 rounded-lg px-2 py-1">
+          <X className="size-4" aria-hidden /> Quitter
+        </Link>
         <span>
           Étape {index + 1}/{steps.length}
         </span>
-        <span title="Écran maintenu allumé">{wake === "on" ? "🔆" : wake === "unsupported" ? "" : "💤"}</span>
+        <span title={wake === "on" ? "Écran maintenu allumé" : "L'écran peut se mettre en veille"}>
+          {wake === "on" ? <Sun className="size-5 text-amber-500" aria-label="Écran maintenu allumé" /> : wake === "off" ? <MoonStar className="size-5" aria-label="Veille possible" /> : null}
+        </span>
       </header>
 
       <div className="mb-3 h-1.5 overflow-hidden rounded-full bg-stone-200">
@@ -148,7 +153,10 @@ export function CookMode({ id, sheet }: { id: number; sheet: BatchSheet }) {
               onClick={() => setTimers(timers.filter((x) => x.stepId !== t.stepId))}
               className="flex w-full items-center justify-between gap-2 rounded-2xl bg-red-600 px-4 py-3 text-left text-white animate-pulse"
             >
-              <span className="min-w-0 truncate font-semibold">⏰ Terminé : {t.label}</span>
+              <span className="flex min-w-0 items-center gap-2 font-semibold">
+                <AlarmClock className="size-5 shrink-0" aria-hidden />
+                <span className="truncate">Terminé : {t.label}</span>
+              </span>
               <span className="shrink-0 text-sm underline">OK</span>
             </button>
           ))}
@@ -159,7 +167,8 @@ export function CookMode({ id, sheet }: { id: number; sheet: BatchSheet }) {
         <ul className="mb-3 flex gap-2 overflow-x-auto">
           {running.map((t) => (
             <li key={t.stepId} className="shrink-0 rounded-full bg-stone-800 px-3 py-1.5 text-sm text-white">
-              ⏳ {mmss(t.endAt - now)} <span className="text-stone-300">· {t.label.slice(0, 28)}</span>
+              <Hourglass className="mr-1 inline size-3.5 align-[-2px]" aria-hidden />
+              {mmss(t.endAt - now)} <span className="text-stone-300">· {t.label.slice(0, 28)}</span>
             </li>
           ))}
         </ul>
@@ -172,7 +181,12 @@ export function CookMode({ id, sheet }: { id: number; sheet: BatchSheet }) {
         </p>
         <p className="text-3xl font-semibold leading-snug sm:text-4xl">{nbsp(step.text)}</p>
         <p className="text-lg text-stone-600">
-          {step.active ? "👩‍🍳 À faire maintenant" : "⏳ Cuit tout seul"}
+          {step.active ? (
+            <ChefHat className="mr-1.5 inline size-5 align-[-4px] text-brand-700" aria-hidden />
+          ) : (
+            <Hourglass className="mr-1.5 inline size-5 align-[-4px] text-sky-700" aria-hidden />
+          )}
+          {step.active ? "À faire maintenant" : "Cuit tout seul"}
           {step.merged ? " · le four chauffe déjà pour un autre plat" : duration > 0 && ` · ${duration} min${step.estimated ? " (estimé)" : ""}`}
           {step.equipment && ` · ${step.equipment}${step.temperature ? ` ${step.temperature} °C` : ""}`}
           <span className="block text-sm text-stone-400">prévu à {clock(step.start)} du début</span>
@@ -183,7 +197,8 @@ export function CookMode({ id, sheet }: { id: number; sheet: BatchSheet }) {
             <p className="text-center font-mono text-6xl font-bold tabular-nums">{mmss(timer.endAt - now)}</p>
           ) : (
             <button onClick={startTimer} className="rounded-2xl bg-stone-800 py-4 text-xl font-semibold text-white">
-              ⏱️ {step.active ? `Minuteur ${duration} min` : `Lancer (${duration} min) et passer à la suite`}
+              <Timer className="mr-2 inline size-6 align-[-5px]" aria-hidden />
+              {step.active ? `Minuteur ${duration} min` : `Lancer (${duration} min) et passer à la suite`}
             </button>
           )
         )}
@@ -201,15 +216,18 @@ export function CookMode({ id, sheet }: { id: number; sheet: BatchSheet }) {
           onClick={() => setIndex(index - 1)}
           className="rounded-2xl border border-stone-300 bg-white py-4 text-lg disabled:opacity-30"
         >
-          ← Précédent
+          <ChevronLeft className="mr-1 inline size-5 align-[-4px]" aria-hidden />
+          Précédent
         </button>
         {index < steps.length - 1 ? (
           <button onClick={() => setIndex(index + 1)} className="btn-primary py-4 text-lg font-semibold text-white">
-            Suivant →
+            Suivant
+            <ChevronRight className="ml-1 inline size-5 align-[-4px]" aria-hidden />
           </button>
         ) : (
           <Link href={`/batch/${id}`} className="rounded-2xl bg-green-600 py-4 text-center text-lg font-semibold text-white">
-            Terminé ✓
+            Terminé
+            <Check className="ml-1 inline size-5 align-[-4px]" aria-hidden />
           </Link>
         )}
       </nav>

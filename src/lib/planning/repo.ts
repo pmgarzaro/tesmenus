@@ -293,13 +293,15 @@ function linkNextLunch(plan: Plan, dinner: { id: number; date: string; slot: str
  * Fills only the empty meals at random (dinners first, so their leftovers can
  * cover the next lunches), keeping everything chosen by hand.
  */
-export function fillEmptyEntries(householdId: number, planId: number): string[] | null {
+export function fillEmptyEntries(householdId: number, planId: number, onlyIds?: number[]): string[] | null {
   const warnings: string[] = [];
   for (const slot of ["soir", "midi"] as const) {
     const plan = getPlan(householdId, planId);
     if (!plan) return null;
     const isEmpty = (e: PlanEntryView) => !e.recipeId && !e.isLeftover && !e.isEatingOut;
-    const targets = plan.entries.filter((e) => isEmpty(e) && e.slot === slot);
+    const targets = plan.entries.filter(
+      (e) => isEmpty(e) && e.slot === slot && (!onlyIds || onlyIds.includes(e.id)),
+    );
     if (targets.length === 0) continue;
     const fixed: Record<string, number | null> = {};
     for (const e of plan.entries) {
@@ -324,6 +326,55 @@ export function fillEmptyEntries(householdId: number, planId: number): string[] 
     }
   }
   return [...new Set(warnings)];
+}
+
+/**
+ * Applies the household settings to plans not finished yet: the stored
+ * options follow the new values, and when the leftovers rule is turned off,
+ * upcoming leftover meals get their own recipe. Past meals are kept.
+ * Returns how many plans had leftover meals replaced.
+ */
+export function syncOpenPlansWithSettings(householdId: number): number {
+  const s = getSettings(householdId);
+  const t = today();
+  let changed = 0;
+  const plans = listPlans(householdId).filter((p) => addDays(p.startDate, p.days - 1) >= t);
+  for (const p of plans) {
+    const plan = getOwnedPlan(householdId, p.id)!;
+    const options: StoredOptions = {
+      ...(plan.options as StoredOptions),
+      people: s.people,
+      servingsPerRecipe: s.servingsPerRecipe,
+      dinnerCoversNextLunch: s.dinnerCoversNextLunch,
+    };
+    getDb().update(schema.mealPlans).set({ options }).where(eq(schema.mealPlans.id, plan.id)).run();
+    if (s.dinnerCoversNextLunch) continue;
+    const leftovers = getDb()
+      .select()
+      .from(schema.mealPlanEntries)
+      .where(
+        and(
+          eq(schema.mealPlanEntries.planId, plan.id),
+          eq(schema.mealPlanEntries.isLeftover, true),
+          gte(schema.mealPlanEntries.date, t),
+        ),
+      )
+      .all();
+    if (leftovers.length === 0) continue;
+    for (const l of leftovers) {
+      update(l.id, { isLeftover: false, sourceEntryId: null, recipeId: null, servings: null });
+      if (!l.sourceEntryId) continue;
+      const stillFeeds = getDb()
+        .select()
+        .from(schema.mealPlanEntries)
+        .where(eq(schema.mealPlanEntries.sourceEntryId, l.sourceEntryId))
+        .get();
+      if (!stillFeeds) update(l.sourceEntryId, { servings: s.people });
+    }
+    fillEmptyEntries(householdId, plan.id, leftovers.map((l) => l.id));
+    changed++;
+  }
+  return changed;
 }
 
 export function setEatingOut(householdId: number, entryId: number): boolean {

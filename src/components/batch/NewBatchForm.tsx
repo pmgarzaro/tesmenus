@@ -1,5 +1,6 @@
 "use client";
 
+import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { createSessionAction } from "@/app/(app)/batch/actions";
@@ -110,7 +111,7 @@ export function NewBatchForm({
                 className="w-16 rounded-lg border border-stone-300 px-2 py-1 text-right"
               />
               portions
-              <button type="button" onClick={() => setExtra(extra.filter((_, j) => j !== i))} aria-label={`Retirer ${r.title}`} className="px-2 text-stone-400">✕</button>
+              <button type="button" onClick={() => setExtra(extra.filter((_, j) => j !== i))} aria-label={`Retirer ${r.title}`} className="px-2 text-stone-400"><X className="size-4" aria-hidden /></button>
             </div>
           );
         })}

@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowDown, ArrowUp, X } from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { AISLES, MEAL_TYPES, STEP_TYPES } from "@/db/schema";
@@ -286,7 +287,7 @@ export function RecipeForm({
                 className="rounded-full bg-brand-100 px-3 py-1 text-sm text-brand-700"
                 aria-label={`Retirer ${t}`}
               >
-                {t} ✕
+                {t} <X className="inline size-3.5 align-[-2px]" aria-hidden />
               </button>
             ))}
             <input
@@ -388,9 +389,9 @@ export function RecipeForm({
                   facultatif
                 </label>
                 <span className="ml-auto flex">
-                  <button type="button" className={iconBtn} disabled={i === 0} onClick={() => setIngs(move(ings, i, -1))} aria-label="Monter">↑</button>
-                  <button type="button" className={iconBtn} disabled={i === ings.length - 1} onClick={() => setIngs(move(ings, i, 1))} aria-label="Descendre">↓</button>
-                  <button type="button" className={iconBtn} onClick={() => setIngs(ings.filter((x) => x.key !== r.key))} aria-label="Supprimer l'ingrédient">✕</button>
+                  <button type="button" className={iconBtn} disabled={i === 0} onClick={() => setIngs(move(ings, i, -1))} aria-label="Monter"><ArrowUp className="size-4" aria-hidden /></button>
+                  <button type="button" className={iconBtn} disabled={i === ings.length - 1} onClick={() => setIngs(move(ings, i, 1))} aria-label="Descendre"><ArrowDown className="size-4" aria-hidden /></button>
+                  <button type="button" className={iconBtn} onClick={() => setIngs(ings.filter((x) => x.key !== r.key))} aria-label="Supprimer l'ingrédient"><X className="size-4" aria-hidden /></button>
                 </span>
               </div>
             </li>
@@ -498,9 +499,9 @@ export function RecipeForm({
                   </>
                 )}
                 <span className="ml-auto flex">
-                  <button type="button" className={iconBtn} disabled={i === 0} onClick={() => setSteps(move(steps, i, -1))} aria-label="Monter">↑</button>
-                  <button type="button" className={iconBtn} disabled={i === steps.length - 1} onClick={() => setSteps(move(steps, i, 1))} aria-label="Descendre">↓</button>
-                  <button type="button" className={iconBtn} onClick={() => setSteps(steps.filter((x) => x.key !== s.key))} aria-label="Supprimer l'étape">✕</button>
+                  <button type="button" className={iconBtn} disabled={i === 0} onClick={() => setSteps(move(steps, i, -1))} aria-label="Monter"><ArrowUp className="size-4" aria-hidden /></button>
+                  <button type="button" className={iconBtn} disabled={i === steps.length - 1} onClick={() => setSteps(move(steps, i, 1))} aria-label="Descendre"><ArrowDown className="size-4" aria-hidden /></button>
+                  <button type="button" className={iconBtn} onClick={() => setSteps(steps.filter((x) => x.key !== s.key))} aria-label="Supprimer l'étape"><X className="size-4" aria-hidden /></button>
                 </span>
               </div>
             </li>

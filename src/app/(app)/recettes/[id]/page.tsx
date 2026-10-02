@@ -1,10 +1,16 @@
+import { Refrigerator, Snowflake } from "lucide-react";
+import { BackLink } from "@/components/BackLink";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AddToPlanButton } from "@/components/planning/AddToPlanButton";
 import { DeleteRecipeButton } from "@/components/recipes/DeleteRecipeButton";
+import { NutritionCard } from "@/components/recipes/NutritionCard";
 import { ScaledIngredients } from "@/components/recipes/ScaledIngredients";
+import { aiEnabledFor } from "@/lib/ai/enabled";
 import { requireUser } from "@/lib/auth";
 import { MEAL_TYPE_LABELS, STEP_TYPE_LABELS, formatMinutes } from "@/lib/labels";
+import { energySplit } from "@/lib/nutrition/compute";
+import { recipeNutrition } from "@/lib/nutrition/repo";
 import { openPlans } from "@/lib/planning/repo";
 import { getRecipe } from "@/lib/recipes/repo";
 import { totalMinutes } from "@/lib/recipes/search";
@@ -16,11 +22,12 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
   const r = getRecipe(householdId, Number((await params).id));
   if (!r) notFound();
   const total = totalMinutes(r);
+  const nutrition = recipeNutrition(r);
 
   return (
     <article className="space-y-4">
       <div className="flex items-center justify-between">
-        <Link href="/recettes" className="text-sm text-stone-500">← Recettes</Link>
+        <BackLink href="/recettes">Recettes</BackLink>
         <Link href={`/recettes/${r.id}/modifier`} className="rounded-xl border border-stone-300 bg-white px-4 py-1.5 text-sm font-medium">
           Modifier
         </Link>
@@ -54,15 +61,28 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
         ))}
       </dl>
 
-      <p className="text-sm text-stone-600">
-        {r.fridgeDays ? `🧊 Se garde ${r.fridgeDays} jour${r.fridgeDays > 1 ? "s" : ""} au frigo` : "🧊 Conservation non précisée"}
-        {" · "}
-        {r.freezable ? "❄️ Congelable" : "Ne se congèle pas"}
+      <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-stone-600">
+        <span className="inline-flex items-center gap-1.5">
+          <Refrigerator className="size-4" aria-hidden />
+          {r.fridgeDays ? `Se garde ${r.fridgeDays} jour${r.fridgeDays > 1 ? "s" : ""} au frigo` : "Conservation non précisée"}
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <Snowflake className="size-4" aria-hidden />
+          {r.freezable ? "Congelable" : "Ne se congèle pas"}
+        </span>
       </p>
 
       <ScaledIngredients
         servings={r.servings}
         ingredients={r.ingredients.map((i) => ({ quantity: i.quantity, unit: i.unit, label: i.label, optional: i.optional }))}
+      />
+
+      <NutritionCard
+        recipeId={r.id}
+        servings={r.servings}
+        result={{ perServing: nutrition.perServing, unknown: nutrition.unknown, details: nutrition.details, coverage: nutrition.coverage }}
+        split={energySplit(nutrition.perServing)}
+        aiEnabled={aiEnabledFor(householdId)}
       />
 
       <section className="paper p-4">

@@ -1,6 +1,9 @@
+import { CookingPot, ShoppingCart } from "lucide-react";
+import { BackLink } from "@/components/BackLink";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MagnetTitle } from "@/components/MagnetTitle";
+import { Warnings } from "@/components/Warnings";
 import { PlanActions } from "@/components/planning/PlanActions";
 import { PlanGrid } from "@/components/planning/PlanGrid";
 import { requireUser } from "@/lib/auth";
@@ -48,7 +51,7 @@ export default async function PlanPage({
   return (
     <>
       <div className="mb-1 flex items-center justify-between text-sm">
-        <Link href="/planning/historique" className="text-stone-500">← Plannings</Link>
+        <BackLink href="/planning/historique">Plannings</BackLink>
         <Link href="/planning/nouveau" className="text-brand-700">+ Nouveau planning</Link>
       </div>
       <header className="mb-4 space-y-2">
@@ -60,11 +63,11 @@ export default async function PlanPage({
           {cooked} repas à cuisiner · {entries.filter((e) => e.isLeftover).length} repas de restes
           {empty > 0 && ` · ${empty} à choisir`}
         </p>
-        <PlanActions planId={plan.id} emptyCount={empty} />
+        <PlanActions planId={plan.id} emptyCount={empty} templateName={`Semaine du ${longDate(plan.startDate)}`} />
       </header>
       {warnings.length > 0 && (
         <div className="mb-3 space-y-1 rounded-2xl bg-amber-50 p-3 text-sm text-amber-800">
-          {warnings.map((w) => <p key={w}>⚠️ {w}</p>)}
+          <Warnings items={warnings} />
         </div>
       )}
       {empty === entries.length && (
@@ -77,10 +80,12 @@ export default async function PlanPage({
         href={`/courses/${plan.id}`}
         className="mt-4 block btn-primary p-3 text-center font-semibold text-white"
       >
-        🛒 Liste de courses de ce planning
+        <ShoppingCart className="mr-2 inline size-5 align-[-3px]" aria-hidden />
+        Liste de courses de ce planning
       </Link>
       <Link href={`/batch/nouveau?plan=${plan.id}`} className="mt-2 block rounded-2xl border border-brand-600 p-3 text-center font-semibold text-brand-700">
-        🥘 Préparer en batch cooking
+        <CookingPot className="mr-2 inline size-5 align-[-3px]" aria-hidden />
+        Préparer en batch cooking
       </Link>
     </>
   );

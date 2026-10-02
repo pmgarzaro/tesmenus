@@ -1,5 +1,6 @@
 "use client";
 
+import { CalendarPlus, Check } from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { editCell } from "@/app/(app)/planning/actions";
@@ -38,7 +39,8 @@ export function AddToPlanButton({ recipeId, plans }: { recipeId: number; plans: 
         }}
         className="w-full btn-primary py-2.5 font-semibold text-white"
       >
-        📅 Ajouter au planning
+        <CalendarPlus className="mr-2 inline size-5 align-[-4px]" aria-hidden />
+        Ajouter au planning
       </button>
       {open && (
         <div className="fixed inset-0 z-30 flex items-end bg-black/40 sm:items-center sm:justify-center" onClick={() => setOpen(false)}>
@@ -51,7 +53,9 @@ export function AddToPlanButton({ recipeId, plans }: { recipeId: number; plans: 
             <h2 className="mb-3 text-lg font-semibold">Ajouter au planning</h2>
             {done ? (
               <div className="space-y-3">
-                <p className="rounded-xl bg-green-50 p-3 text-green-800">✓ Ajouté pour {done.label}.</p>
+                <p className="flex items-center gap-2 rounded-xl bg-green-50 p-3 text-green-800">
+                  <Check className="size-5" aria-hidden /> Ajouté pour {done.label}.
+                </p>
                 <Link href={`/planning/${done.planId}`} className="block text-center font-medium text-brand-700 underline">
                   Voir le planning
                 </Link>

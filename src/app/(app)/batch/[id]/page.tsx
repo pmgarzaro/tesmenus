@@ -1,5 +1,7 @@
-import Link from "next/link";
+import { ChefHat, Hourglass } from "lucide-react";
+import { BackLink } from "@/components/BackLink";
 import { notFound } from "next/navigation";
+import { Warnings } from "@/components/Warnings";
 import { SheetActions } from "@/components/batch/SheetActions";
 import { requireUser } from "@/lib/auth";
 import { clock } from "@/lib/batch/format";
@@ -30,7 +32,7 @@ export default async function BatchSheetPage({ params }: { params: Promise<{ id:
 
   return (
     <article className="space-y-4">
-      <Link href="/batch" className="text-sm text-stone-500 print:hidden">← Batch cooking</Link>
+      <BackLink href="/batch" className="print:hidden">Batch cooking</BackLink>
       <header className="space-y-2">
         <h1 className="font-display text-3xl font-bold leading-tight">Session du {longDate(s.sessionDate)}</h1>
         <ul className="flex flex-wrap gap-1.5">
@@ -61,7 +63,7 @@ export default async function BatchSheetPage({ params }: { params: Promise<{ id:
 
       {s.warnings.length > 0 && (
         <div className="space-y-1 rounded-2xl bg-amber-50 p-3 text-sm text-amber-800">
-          {s.warnings.map((w) => <p key={w}>⚠️ {w}</p>)}
+          <Warnings items={s.warnings} />
         </div>
       )}
 
@@ -113,15 +115,23 @@ export default async function BatchSheetPage({ params }: { params: Promise<{ id:
 
       <section className={box}>
         <h2 className="mb-1 text-lg font-semibold">3. Déroulé</h2>
-        <p className="mb-3 text-xs text-stone-500">👩‍🍳 tu t&apos;en occupes · ⏳ ça cuit tout seul pendant que tu fais la suite</p>
+        <p className="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-stone-500">
+          <span className="inline-flex items-center gap-1"><ChefHat className="size-3.5" aria-hidden /> tu t&apos;en occupes</span>
+          <span className="inline-flex items-center gap-1"><Hourglass className="size-3.5" aria-hidden /> ça cuit tout seul pendant que tu fais la suite</span>
+        </p>
         <ol className="space-y-2">
           {s.timeline.map((t) => (
             <li key={t.id} className="flex gap-3 print:break-inside-avoid">
               <span className="w-12 shrink-0 pt-0.5 font-mono text-sm text-stone-500">{clock(t.start)}</span>
               <span className={`mt-1.5 size-2.5 shrink-0 rounded-full ${color.get(t.recipeKey)}`} />
               <span className="min-w-0 flex-1">
-                <span className="block">
-                  {t.active ? "👩‍🍳" : "⏳"} {t.text}
+                <span className="flex gap-1.5">
+                  {t.active ? (
+                    <ChefHat className="mt-0.5 size-4 shrink-0 text-brand-700" aria-label="à faire" />
+                  ) : (
+                    <Hourglass className="mt-0.5 size-4 shrink-0 text-sky-700" aria-label="cuit tout seul" />
+                  )}
+                  <span>{t.text}</span>
                 </span>
                 <span className="block text-xs text-stone-500">
                   {[

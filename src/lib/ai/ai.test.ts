@@ -223,3 +223,43 @@ describe("planning wishes", () => {
     expect(requests[0].body.generationConfig.responseJsonSchema.properties.eatingOut.items.properties.date.enum).toEqual(ctx.dates);
   });
 });
+
+describe("nutrition estimate", () => {
+  it("fills unknown foods and missing piece weights, for the household only", async () => {
+    const { getDb, schema } = await import("@/db");
+    const { estimateMissingWithAi } = await import("@/lib/nutrition/repo");
+    const h = getDb().insert(schema.households).values({ name: "N" }).returning().get().id;
+    const add = (name: string) =>
+      getDb().insert(schema.ingredients).values({ householdId: h, name }).returning().get().id;
+    const kombu = add("galette kombucha");
+    const oignon = add("oignon rouge géant");
+    replies = [
+      answer({
+        items: [
+          { name: "galette kombucha", kcal: 310, protein: 6, carbs: 62, fat: 3, gramsPerUnit: 45 },
+          { name: "oignon rouge géant", kcal: 999, protein: 1, carbs: 9, fat: 0, gramsPerUnit: 250 },
+        ],
+      }),
+      // First answer is invalid (kcal > 900), the retry is fine.
+      answer({
+        items: [
+          { name: "galette kombucha", kcal: 310, protein: 6, carbs: 62, fat: 3, gramsPerUnit: 45 },
+          { name: "oignon rouge géant", kcal: 40, protein: 1, carbs: 9, fat: 0, gramsPerUnit: 250 },
+        ],
+      }),
+    ];
+    const filled = await estimateMissingWithAi(h, [
+      { ingredientId: kombu, name: "galette kombucha", reason: "aliment" },
+      { ingredientId: oignon, name: "oignon rouge géant", reason: "poids" },
+      { ingredientId: 999_999, name: "ailleurs", reason: "aliment" },
+    ]);
+    expect(filled).toBe(2);
+    const prompt = requests[0].body.contents[0].parts[0].text as string;
+    expect(prompt).toContain("- galette kombucha");
+    expect(prompt).not.toContain("ailleurs");
+    const row = (id: number) => getDb().select().from(schema.ingredients).all().find((i) => i.id === id)!;
+    expect(row(kombu)).toMatchObject({ kcal: 310, gramsPerUnit: 45, nutritionSource: "ia" });
+    // Known food: only the piece weight is taken from the AI.
+    expect(row(oignon)).toMatchObject({ kcal: null, gramsPerUnit: 250, nutritionSource: "ia" });
+  });
+});
