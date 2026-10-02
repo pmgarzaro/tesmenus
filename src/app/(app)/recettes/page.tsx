@@ -8,6 +8,7 @@ import { MEAL_TYPES } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { formatMinutes } from "@/lib/labels";
 import { noteForTags, tiltAt } from "@/lib/notes";
+import { kcalPerServingByRecipe } from "@/lib/nutrition/repo";
 import { listRecipeSummaries } from "@/lib/recipes/repo";
 import { type RecipeFilters, filterRecipes, tagCounts, totalMinutes } from "@/lib/recipes/search";
 
@@ -30,6 +31,7 @@ export default async function RecipesPage({ searchParams }: { searchParams: Prom
   const all = listRecipeSummaries(householdId);
   const recipes = filterRecipes(all, parseFilters(await searchParams));
   const tags = tagCounts(all).map((t) => t.tag);
+  const kcal = kcalPerServingByRecipe(householdId);
 
   return (
     <>
@@ -69,7 +71,12 @@ export default async function RecipesPage({ searchParams }: { searchParams: Prom
                       href={`/recettes/${r.id}`}
                       className={`postit magnet ${style.note} ${style.magnet} ${tiltAt(i)} flex min-h-28 flex-col justify-between gap-2 px-3 pb-2.5 pt-4 transition-transform active:scale-[0.98]`}
                     >
-                      <span className="font-hand text-[1.45rem] font-bold leading-[1.05] [overflow-wrap:anywhere]">{r.title}</span>
+                      <span className="flex flex-col gap-0.5">
+                        <span className="font-hand text-[1.45rem] font-bold leading-[1.05] [overflow-wrap:anywhere]">{r.title}</span>
+                        {kcal.has(r.id) && (
+                          <span className="text-xs text-stone-600">≈ {Math.round(kcal.get(r.id)!)} kcal / portion</span>
+                        )}
+                      </span>
                       <span className="flex items-end justify-between gap-1 text-xs text-stone-600">
                         <span className="min-w-0 truncate">{r.tags.slice(0, 2).join(" · ")}</span>
                         <span className="shrink-0 font-medium">

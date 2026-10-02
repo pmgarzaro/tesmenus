@@ -4,9 +4,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AddToPlanButton } from "@/components/planning/AddToPlanButton";
 import { DeleteRecipeButton } from "@/components/recipes/DeleteRecipeButton";
+import { NutritionCard } from "@/components/recipes/NutritionCard";
 import { ScaledIngredients } from "@/components/recipes/ScaledIngredients";
+import { aiEnabledFor } from "@/lib/ai/enabled";
 import { requireUser } from "@/lib/auth";
 import { MEAL_TYPE_LABELS, STEP_TYPE_LABELS, formatMinutes } from "@/lib/labels";
+import { energySplit } from "@/lib/nutrition/compute";
+import { recipeNutrition } from "@/lib/nutrition/repo";
 import { openPlans } from "@/lib/planning/repo";
 import { getRecipe } from "@/lib/recipes/repo";
 import { totalMinutes } from "@/lib/recipes/search";
@@ -18,6 +22,7 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
   const r = getRecipe(householdId, Number((await params).id));
   if (!r) notFound();
   const total = totalMinutes(r);
+  const nutrition = recipeNutrition(r);
 
   return (
     <article className="space-y-4">
@@ -70,6 +75,14 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
       <ScaledIngredients
         servings={r.servings}
         ingredients={r.ingredients.map((i) => ({ quantity: i.quantity, unit: i.unit, label: i.label, optional: i.optional }))}
+      />
+
+      <NutritionCard
+        recipeId={r.id}
+        servings={r.servings}
+        result={{ perServing: nutrition.perServing, unknown: nutrition.unknown, details: nutrition.details, coverage: nutrition.coverage }}
+        split={energySplit(nutrition.perServing)}
+        aiEnabled={aiEnabledFor(householdId)}
       />
 
       <section className="paper p-4">

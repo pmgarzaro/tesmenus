@@ -83,6 +83,14 @@ export const ingredients = sqliteTable(
     householdId: householdId(),
     name: text("name").notNull(), // normalised name, e.g. "oignon"
     aisle: text("aisle", { enum: AISLES }).notNull().default("autre"),
+    // Nutrition per 100 g, filled by hand or by the AI when the built-in table
+    // does not know the ingredient. gramsPerUnit: weight of one piece.
+    kcal: real("kcal"),
+    protein: real("protein"),
+    carbs: real("carbs"),
+    fat: real("fat"),
+    gramsPerUnit: real("grams_per_unit"),
+    nutritionSource: text("nutrition_source", { enum: ["manuel", "ia"] }),
   },
   (t) => [uniqueIndex("ingredients_household_name_idx").on(t.householdId, t.name)],
 );
