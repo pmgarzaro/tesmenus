@@ -77,4 +77,26 @@ describe("computeNutrition", () => {
     expect(s.protein + s.carbs + s.fat).toBeCloseTo(1);
     expect(s.carbs).toBeCloseTo(200 / 390);
   });
+
+  it("reads the cut in brackets and refuses absurd piece weights", () => {
+    const lines = [
+      "600 g de Gnocchi (à poêler)",
+      "4 Poulets (escalope)",
+      "400 g de Tomates cerises",
+      "2 Courgettes",
+      "1 Oignon rouge",
+      "4 c. à s. de Crème fraîche",
+      "4 c. à s. de Sauce pesto rouge",
+      "2 c. à s. d'Huile d'olive (facultatif)",
+    ].map((t) => line(t));
+    const r = computeNutrition(lines, 4);
+    expect(r.unknown).toEqual([]);
+    expect(r.details.find((d) => d.name === "poulet")?.grams).toBe(520); // 4 escalopes, not 4 chickens
+    expect(r.perServing.kcal).toBeGreaterThan(450);
+    expect(r.perServing.kcal).toBeLessThan(650);
+
+    // Without the cut, "4 poulets" for 4 people would be 1 kg each: ask for the weight.
+    expect(computeNutrition([line("4 poulets")], 4).unknown).toMatchObject([{ reason: "poids" }]);
+    expect(computeNutrition([line("1 poulet")], 4).unknown).toEqual([]);
+  });
 });

@@ -78,6 +78,10 @@ export const NUTRITION_TABLE: NutritionRow[] = [
   // Féculents et céréales (crus / secs)
   [["riz", "riz basmati", "riz thaï", "riz rond", "riz complet"], 350, 7, 77, 0.6],
   [["pâtes", "spaghetti", "penne", "tagliatelles", "coquillettes", "macaroni", "fusilli", "lasagne"], 355, 12.5, 70, 1.5],
+  [["pâtes fraîches", "tagliatelles fraîches"], 280, 11, 53, 2.5],
+  [["gnocchi", "gnocchis"], 160, 4, 33, 0.8],
+  [["ravioli", "raviolis", "tortellini", "ravioles"], 260, 10, 38, 7],
+  [["nouilles", "nouilles chinoises", "nouilles de riz", "vermicelles de riz"], 360, 9, 77, 1.5],
   [["semoule", "couscous"], 360, 12, 72, 1.4],
   [["quinoa"], 365, 14, 64, 6],
   [["boulgour"], 345, 12, 69, 1.5],
@@ -151,7 +155,7 @@ export const NUTRITION_TABLE: NutritionRow[] = [
   [["porc", "échine de porc", "côte de porc"], 230, 18, 0, 17],
   [["filet mignon"], 120, 22, 0, 3.5],
   [["poulet", "poulet fermier", "poulet entier"], 190, 18, 0, 13, 1000], // partie comestible
-  [["blanc de poulet", "filet de poulet", "escalope de poulet"], 110, 23, 0, 1.5, 130],
+  [["blanc de poulet", "filet de poulet", "escalope de poulet", "escalope", "aiguillettes de poulet"], 110, 23, 0, 1.5, 130],
   [["cuisse de poulet", "haut de cuisse"], 160, 18, 0, 10, 180],
   [["dinde", "escalope de dinde"], 110, 24, 0, 1.5, 120],
   [["lardon", "lardons", "poitrine fumée"], 300, 15, 0, 27],
