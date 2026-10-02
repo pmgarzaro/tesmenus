@@ -4,7 +4,7 @@ export default function NotFound() {
   return (
     <main className="mx-auto flex min-h-dvh max-w-sm flex-col items-center justify-center gap-4 px-6 text-center">
       <p className="text-5xl">🍽️</p>
-      <h1 className="font-hand text-[2.4rem] font-bold leading-none">Page introuvable</h1>
+      <h1 className="font-display text-3xl font-bold leading-tight">Page introuvable</h1>
       <p className="text-stone-600">Cette page n&apos;existe pas, ou elle appartient à un autre foyer.</p>
       <Link href="/recettes" className="btn-primary px-5 py-3 font-semibold text-white">
         Retour aux recettes

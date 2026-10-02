@@ -27,7 +27,7 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
       </div>
 
       <header className="space-y-2">
-        <h1 className="font-hand text-[2.6rem] font-bold leading-[0.95]">{r.title}</h1>
+        <h1 className="font-display text-3xl font-bold leading-tight">{r.title}</h1>
         {r.description && <p className="text-stone-600">{r.description}</p>}
         <div className="flex flex-wrap gap-1.5">
           <span className="rounded-full bg-stone-200 px-2.5 py-0.5 text-xs">{MEAL_TYPE_LABELS[r.mealType]}</span>

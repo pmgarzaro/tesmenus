@@ -6,7 +6,7 @@ import { LibraryFilters } from "@/components/recipes/LibraryFilters";
 import { MEAL_TYPES } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { formatMinutes } from "@/lib/labels";
-import { noteForTags, tiltAt } from "@/lib/notes";
+import { magnetForTags } from "@/lib/notes";
 import { listRecipeSummaries } from "@/lib/recipes/repo";
 import { type RecipeFilters, filterRecipes, tagCounts, totalMinutes } from "@/lib/recipes/search";
 
@@ -36,14 +36,15 @@ export default async function RecipesPage({ searchParams }: { searchParams: Prom
         title="Recettes"
         action={
           all.length > 0 && (
-            <Link href="/recettes/vide-frigo" className="rounded-xl border border-stone-300 bg-white px-3 py-1.5 text-sm">
-              🧊 Vide-frigo
+            <Link href="/recettes/vide-frigo" className="flex min-h-11 items-center gap-1.5 rounded-xl bg-white px-3 font-display font-semibold shadow-[0_1px_2px_rgb(0_0_0/0.06)]">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M12 2v20M4 6l16 12M20 6L4 18" /></svg>
+              Vide-frigo
             </Link>
           )
         }
       />
       {all.length === 0 ? (
-        <div className="postit note-yellow magnet magnet-red tilt-l space-y-3 p-6 pt-7 text-center text-stone-700">
+        <div className="paper space-y-3 p-6 text-center text-stone-700">
           <p>Ta bibliothèque est vide.</p>
           <p>
             Ajoute une recette avec le bouton <strong>+</strong>, ou charge les exemples depuis les{" "}
@@ -58,21 +59,30 @@ export default async function RecipesPage({ searchParams }: { searchParams: Prom
           {recipes.length === 0 ? (
             <p className="p-6 text-center text-stone-500">Aucune recette ne correspond.</p>
           ) : (
-            <ul className="grid grid-cols-2 gap-x-3 gap-y-5 pt-2 sm:grid-cols-3">
-              {recipes.map((r, i) => {
-                const style = noteForTags(r.tags, r.mealType);
+            <ul className="grid grid-cols-2 gap-3 pt-1 sm:grid-cols-3">
+              {recipes.map((r) => {
+                const magnet = magnetForTags(r.tags, r.mealType);
                 return (
                   <li key={r.id} className="min-w-0">
                     <Link
                       href={`/recettes/${r.id}`}
-                      className={`postit magnet ${style.note} ${style.magnet} ${tiltAt(i)} flex min-h-28 flex-col justify-between gap-2 px-3 pb-2.5 pt-4 transition-transform active:scale-[0.98]`}
+                      className="paper flex h-full min-h-28 gap-2.5 p-3 transition-transform active:scale-[0.98]"
                     >
-                      <span className="font-hand text-[1.45rem] font-bold leading-[1.05] [overflow-wrap:anywhere]">{r.title}</span>
-                      <span className="flex items-end justify-between gap-1 text-xs text-stone-600">
-                        <span className="min-w-0 truncate">{r.tags.slice(0, 2).join(" · ")}</span>
-                        <span className="shrink-0 font-medium">
-                          {formatMinutes(totalMinutes(r))}
-                          {r.freezable && " ❄️"}
+                      <span aria-hidden="true" className={`magnet-letter ${magnet} w-7 shrink-0 -rotate-6 text-[2.1rem] uppercase`}>
+                        {r.title.charAt(0)}
+                      </span>
+                      <span className="flex min-w-0 flex-1 flex-col justify-between gap-2">
+                        <span className="font-extrabold leading-tight [overflow-wrap:anywhere]">{r.title}</span>
+                        <span className="flex items-end justify-between gap-1 text-xs text-stone-600">
+                          <span className="min-w-0 truncate">{r.tags.slice(0, 2).join(" · ")}</span>
+                          <span className="flex shrink-0 items-center gap-1 font-semibold">
+                            {formatMinutes(totalMinutes(r))}
+                            {r.freezable && (
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" className="text-magnet-blue-dark" role="img" aria-label="congelable">
+                                <path d="M12 2v20M4 6l16 12M20 6L4 18" />
+                              </svg>
+                            )}
+                          </span>
                         </span>
                       </span>
                     </Link>

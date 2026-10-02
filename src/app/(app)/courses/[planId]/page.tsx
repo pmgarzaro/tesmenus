@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { MagnetTitle } from "@/components/MagnetTitle";
 import { ShoppingList } from "@/components/shopping/ShoppingList";
 import { requireUser } from "@/lib/auth";
 import { addDays, longDate } from "@/lib/planning/dates";
@@ -16,7 +17,9 @@ export default async function ShoppingPage({ params }: { params: Promise<{ planI
   return (
     <>
       <Link href={`/planning/${plan.id}`} className="text-sm text-stone-500">← Planning {period}</Link>
-      <h1 className="mb-3 mt-1 font-hand text-[2.4rem] font-bold leading-none">Liste de courses</h1>
+      <div className="mb-4 mt-2">
+        <MagnetTitle text="Courses" />
+      </div>
       <ShoppingList planId={plan.id} title={`Courses ${period}`} items={list.items} manual={list.manual} />
     </>
   );

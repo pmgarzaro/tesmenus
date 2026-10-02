@@ -21,7 +21,7 @@ export default async function FridgePage() {
   return (
     <>
       <Link href="/recettes" className="text-sm text-stone-500">← Recettes</Link>
-      <PageHeader title="🧊 Vide-frigo" />
+      <PageHeader title="Vide-frigo" />
       <p className="mb-3 text-sm text-stone-600">Indique ce qu&apos;il te reste : l&apos;appli trouve les recettes de ta bibliothèque que tu peux faire.</p>
       <FridgeFinder recipes={listFridgeRecipes(householdId)} suggestions={suggestions} pantry={getSettings(householdId).pantry} />
     </>

@@ -13,7 +13,7 @@ export default async function BatchPage() {
   return (
     <>
       <PageHeader
-        title="Batch cooking"
+        title="Batch"
         action={<Link href="/batch/nouveau" className="btn-primary px-4 py-2 text-sm font-semibold text-white">Nouvelle session</Link>}
       />
       {sessions.length === 0 ? (

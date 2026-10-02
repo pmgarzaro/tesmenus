@@ -5,7 +5,7 @@ import { useState, useTransition } from "react";
 import { type CellAction, editCell } from "@/app/(app)/planning/actions";
 import { formatMinutes } from "@/lib/labels";
 import { shortDate, weekdayName } from "@/lib/planning/dates";
-import { noteAt, tiltAt } from "@/lib/notes";
+import { magnetAt } from "@/lib/notes";
 import { fold } from "@/lib/recipes/normalize";
 
 export type GridEntry = {
@@ -70,13 +70,14 @@ export function PlanGrid({ planId, entries, recipes, today }: { planId: number; 
         {dates.map((date, i) => (
           <section
             key={date}
-            className={`postit magnet min-w-0 p-3 pt-4 ${noteAt(i).note} ${noteAt(i).magnet} ${tiltAt(i)} ${date === today ? "outline-2 outline-offset-2 outline-brand-500" : ""}`}
+            className={`paper min-w-0 border-2 px-4 pb-1 pt-3 ${date === today ? "border-magnet-red" : "border-transparent"}`}
           >
-            <h2 className="mb-2 flex items-baseline justify-between">
+            <h2 className="mb-1 flex items-center gap-2.5">
+              <span className={`magnet ${magnetAt(i)}`} aria-hidden="true" />
               {capitalize(shortDate(date))}
-              {date === today && <span className="font-hand text-lg text-brand-700">aujourd&apos;hui !</span>}
+              {date === today && <span className="ml-auto rounded-full bg-brand-600 px-2.5 py-0.5 text-sm text-white">aujourd&apos;hui</span>}
             </h2>
-            <ul className="space-y-2">
+            <ul className="divide-y divide-stone-100">
               {entries.filter((e) => e.date === date).map((e) => {
                 const swappable = !swapFrom || (!e.isLeftover && e.id !== swapFrom.id);
                 return (
@@ -84,11 +85,11 @@ export function PlanGrid({ planId, entries, recipes, today }: { planId: number; 
                     <button
                       onClick={() => onCell(e)}
                       disabled={!swappable}
-                      className={`flex w-full gap-3 rounded-md border px-3 py-2 text-left disabled:opacity-40 ${
-                        swapFrom && swappable ? "border-brand-500 bg-brand-50" : "border-black/5 bg-white/70"
+                      className={`flex min-h-13 w-full items-center gap-3 rounded-xl px-1 py-2.5 text-left disabled:opacity-40 ${
+                        swapFrom && swappable ? "bg-brand-50 outline-2 outline-brand-500" : ""
                       }`}
                     >
-                      <span className="w-10 shrink-0 pt-0.5 text-xs font-medium uppercase text-stone-400">{slotLabel[e.slot]}</span>
+                      <span className="w-10 shrink-0 font-display text-sm font-semibold uppercase text-stone-500">{slotLabel[e.slot]}</span>
                       <Cell e={e} />
                     </button>
                   </li>
@@ -129,10 +130,10 @@ function Cell({ e }: { e: GridEntry }) {
       </span>
     );
   }
-  if (!e.recipe) return <span className="text-stone-400">Rien de prévu · toucher pour choisir</span>;
+  if (!e.recipe) return <span className="flex-1 rounded-xl border-2 border-dashed border-stone-300 px-3 py-1.5 text-stone-500">+ Choisir une recette</span>;
   return (
     <span className="min-w-0">
-      <span className="block truncate font-medium">{e.recipe.title}</span>
+      <span className="block truncate font-bold">{e.recipe.title}</span>
       <span className="block text-xs text-stone-500">
         {[`${e.servings} portions`, formatMinutes(e.recipe.minutes), e.hasLeftovers && "restes prévus"].filter(Boolean).join(" · ")}
       </span>

@@ -166,7 +166,7 @@ export function CookMode({ id, sheet }: { id: number; sheet: BatchSheet }) {
       )}
 
       <main className="flex flex-1 flex-col justify-center gap-5 py-4">
-        <p className="flex items-center gap-2 font-hand text-3xl font-bold text-stone-600">
+        <p className="flex items-center gap-2 font-display text-2xl font-semibold text-stone-600">
           <span className={`size-3.5 rounded-full ${color.get(step.recipeKey)}`} />
           {step.recipeTitle}
         </p>

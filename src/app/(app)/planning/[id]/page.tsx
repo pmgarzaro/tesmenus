@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { MagnetTitle } from "@/components/MagnetTitle";
 import { PlanActions } from "@/components/planning/PlanActions";
 import { PlanGrid } from "@/components/planning/PlanGrid";
 import { requireUser } from "@/lib/auth";
@@ -51,9 +52,10 @@ export default async function PlanPage({
         <Link href="/planning/nouveau" className="text-brand-700">+ Nouveau planning</Link>
       </div>
       <header className="mb-4 space-y-2">
-        <h1 className="font-hand text-[2.3rem] font-bold leading-none">
+        <MagnetTitle text="Planning" />
+        <p className="font-display text-xl font-semibold leading-tight">
           Du {longDate(plan.startDate)} au {longDate(addDays(plan.startDate, plan.days - 1))}
-        </h1>
+        </p>
         <p className="text-sm text-stone-500">
           {cooked} repas à cuisiner · {entries.filter((e) => e.isLeftover).length} repas de restes
           {empty > 0 && ` · ${empty} à choisir`}
