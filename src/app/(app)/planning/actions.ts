@@ -12,6 +12,7 @@ import { listRecipeSummaries } from "@/lib/recipes/repo";
 import { tagCounts, totalMinutes } from "@/lib/recipes/search";
 import { dateRange, isValidDate } from "@/lib/planning/dates";
 import * as plans from "@/lib/planning/repo";
+import * as templates from "@/lib/planning/templates";
 
 const newPlanSchema = z.object({
   startDate: z.string().refine(isValidDate, "Date invalide"),
@@ -145,4 +146,43 @@ export async function deletePlanAction(planId: number): Promise<void> {
   plans.deletePlan(householdId, planId);
   revalidatePath("/planning");
   redirect("/planning/historique");
+}
+
+const templateName = z.string().trim().min(1, "Donne un nom au modèle").max(60, "Nom trop long");
+
+export async function saveTemplateAction(planId: number, name: string): Promise<string> {
+  const { householdId } = await requireUser();
+  const parsed = templateName.safeParse(name);
+  if (!parsed.success) return parsed.error.issues[0].message;
+  if (templates.saveTemplate(householdId, planId, parsed.data) === null) return "Planning introuvable";
+  revalidatePath("/planning/historique");
+  revalidatePath("/planning/nouveau");
+  return `Modèle « ${parsed.data} » enregistré`;
+}
+
+export async function applyTemplateAction(templateId: number, startDate: string): Promise<string> {
+  const { householdId } = await requireUser();
+  if (!isValidDate(startDate)) return "Date invalide";
+  const created = templates.createPlanFromTemplate(householdId, templateId, startDate);
+  if (!created) return "Modèle introuvable";
+  revalidatePath("/planning");
+  const { id, warnings } = created;
+  redirect(`/planning/${id}${warnings.length ? `?w=${encodeURIComponent(JSON.stringify(warnings))}` : ""}`);
+}
+
+export async function renameTemplateAction(templateId: number, name: string): Promise<string | null> {
+  const { householdId } = await requireUser();
+  const parsed = templateName.safeParse(name);
+  if (!parsed.success) return parsed.error.issues[0].message;
+  if (!templates.renameTemplate(householdId, templateId, parsed.data)) return "Modèle introuvable";
+  revalidatePath("/planning/historique");
+  revalidatePath("/planning/nouveau");
+  return null;
+}
+
+export async function deleteTemplateAction(templateId: number): Promise<void> {
+  const { householdId } = await requireUser();
+  templates.deleteTemplate(householdId, templateId);
+  revalidatePath("/planning/historique");
+  revalidatePath("/planning/nouveau");
 }

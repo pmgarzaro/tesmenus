@@ -61,7 +61,7 @@ export default async function PlanPage({
           {cooked} repas à cuisiner · {entries.filter((e) => e.isLeftover).length} repas de restes
           {empty > 0 && ` · ${empty} à choisir`}
         </p>
-        <PlanActions planId={plan.id} emptyCount={empty} />
+        <PlanActions planId={plan.id} emptyCount={empty} templateName={`Semaine du ${longDate(plan.startDate)}`} />
       </header>
       {warnings.length > 0 && (
         <div className="mb-3 space-y-1 rounded-2xl bg-amber-50 p-3 text-sm text-amber-800">

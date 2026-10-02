@@ -1,14 +1,17 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
 import { requireUser } from "@/lib/auth";
-import { addDays, longDate, today } from "@/lib/planning/dates";
+import { TemplateList } from "@/components/planning/TemplateList";
+import { addDays, defaultStartDate, longDate, today } from "@/lib/planning/dates";
 import { listPlans } from "@/lib/planning/repo";
+import { listTemplates } from "@/lib/planning/templates";
 
 export const dynamic = "force-dynamic";
 
 export default async function HistoryPage() {
   const { householdId } = await requireUser();
   const plans = listPlans(householdId);
+  const templates = listTemplates(householdId);
   const t = today();
   return (
     <>
@@ -16,6 +19,12 @@ export default async function HistoryPage() {
         title="Plannings"
         action={<Link href="/planning/nouveau" className="btn-primary px-4 py-2 text-sm font-semibold text-white">Nouveau</Link>}
       />
+      {templates.length > 0 && (
+        <div className="mb-5">
+          <TemplateList templates={templates} defaultStart={defaultStartDate()} />
+          <h2 className="mt-5 font-hand text-2xl font-bold">Mes plannings</h2>
+        </div>
+      )}
       {plans.length === 0 ? (
         <p className="p-6 text-center text-stone-500">Aucun planning.</p>
       ) : (

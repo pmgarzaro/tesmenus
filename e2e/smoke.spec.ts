@@ -48,6 +48,20 @@ test("parcours principal", async ({ page }) => {
   await expect(page).toHaveURL(/\/planning\/\d+/);
   await expect(page.getByText(/^Restes : /).first()).toBeVisible();
 
+  // Saved as a template, then reused another week
+  const planUrl = page.url();
+  await page.getByRole("button", { name: "Sauvegarder comme modèle" }).click();
+  await page.getByLabel("Nom du modèle").fill("Semaine type");
+  await page.getByRole("button", { name: "Sauver" }).click();
+  await expect(page.getByText("Modèle « Semaine type » enregistré")).toBeVisible();
+  await page.goto("/planning/historique");
+  await page.getByRole("button", { name: /^Semaine type \d+ jours/ }).click();
+  await page.getByLabel("À partir du").fill("2026-10-19");
+  await page.getByRole("button", { name: "Utiliser" }).click();
+  await expect(page.getByRole("heading", { name: /Du 19 octobre/ })).toBeVisible();
+  await expect(page.getByText(/^Restes : /).first()).toBeVisible();
+  await page.goto(planUrl);
+
   // Shopping list
   await page.getByText("Liste de courses de ce planning").click();
   await expect(page).toHaveURL(/\/courses\/\d+/);

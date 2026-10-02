@@ -3,8 +3,9 @@
 import { Dices } from "lucide-react";
 import { useTransition } from "react";
 import { deletePlanAction, fillEmptyAction, regeneratePlanAction } from "@/app/(app)/planning/actions";
+import { SaveTemplateButton } from "./SaveTemplateButton";
 
-export function PlanActions({ planId, emptyCount }: { planId: number; emptyCount: number }) {
+export function PlanActions({ planId, emptyCount, templateName }: { planId: number; emptyCount: number; templateName: string }) {
   const [pending, start] = useTransition();
   return (
     <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
@@ -30,6 +31,7 @@ export function PlanActions({ planId, emptyCount }: { planId: number; emptyCount
           </>
         )}
       </button>
+      <SaveTemplateButton planId={planId} defaultName={templateName} />
       <button
         disabled={pending}
         onClick={() => confirm("Supprimer ce planning ?") && start(() => deletePlanAction(planId))}

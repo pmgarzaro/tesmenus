@@ -142,6 +142,27 @@ export const mealPlans = sqliteTable("meal_plans", {
   createdAt: createdAt(),
 });
 
+/** A saved week, reusable at any start date. Days are 0-based offsets. */
+export type TemplateEntry = {
+  day: number;
+  slot: (typeof SLOTS)[number];
+  recipeId: number | null;
+  servings: number | null;
+  isEatingOut: boolean;
+  /** Cell whose leftovers cover this meal. */
+  leftoverOf: { day: number; slot: (typeof SLOTS)[number] } | null;
+};
+
+export const planTemplates = sqliteTable("plan_templates", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  householdId: householdId(),
+  name: text("name").notNull(),
+  days: integer("days").notNull(),
+  slots: text("slots", { mode: "json" }).$type<(typeof SLOTS)[number][]>().notNull(),
+  entries: text("entries", { mode: "json" }).$type<TemplateEntry[]>().notNull(),
+  createdAt: createdAt(),
+});
+
 export const mealPlanEntries = sqliteTable(
   "meal_plan_entries",
   {

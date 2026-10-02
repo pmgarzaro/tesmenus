@@ -2,9 +2,11 @@ import { BackLink } from "@/components/BackLink";
 import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
 import { NewPlanForm } from "@/components/planning/NewPlanForm";
+import { TemplateList } from "@/components/planning/TemplateList";
 import { aiEnabledFor } from "@/lib/ai/enabled";
 import { requireUser } from "@/lib/auth";
 import { defaultStartDate } from "@/lib/planning/dates";
+import { listTemplates } from "@/lib/planning/templates";
 import { listRecipeSummaries } from "@/lib/recipes/repo";
 import { tagCounts, totalMinutes } from "@/lib/recipes/search";
 import { getSettings } from "@/lib/settings";
@@ -34,6 +36,9 @@ export default async function NewPlanPage() {
           aiAvailable={aiEnabledFor(householdId)}
         />
       )}
+      <div className="mt-6">
+        <TemplateList templates={listTemplates(householdId)} defaultStart={defaultStartDate()} />
+      </div>
     </>
   );
 }
