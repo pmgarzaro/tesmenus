@@ -36,6 +36,24 @@ export function lookupNutrition(name: string): Entry | null {
   return k ? INDEX.get(k)! : null;
 }
 
+/**
+ * Same, using what the label adds in brackets: "Poulets (escalope)" is an
+ * "escalope de poulet", not a whole chicken.
+ */
+export function lookupForLine(name: string, label: string): Entry | null {
+  for (const [, extra] of label.matchAll(/\(([^)]+)\)/g)) {
+    for (const candidate of [`${extra} de ${name}`, `${extra} ${name}`, extra]) {
+      const hit = INDEX.get(ingredientKey(candidate));
+      if (hit) return hit;
+    }
+  }
+  return lookupNutrition(name);
+}
+
+// Above this, a weight guessed from a piece count is more likely a misread
+// ("4 poulets" for 4 pieces of chicken) than a real portion: ask instead.
+const MAX_GUESSED_GRAMS_PER_SERVING = 500;
+
 // Liquids a little lighter / heavier than water (g per ml).
 const DENSITY: [RegExp, number][] = [
   [/^huile/, 0.92],
@@ -110,7 +128,7 @@ export function computeNutrition(lines: NutritionLine[], servings: number): Nutr
   for (const l of lines) {
     // Optional ingredients and "sel, poivre" without quantity are left out.
     if (l.optional || l.quantity === null) continue;
-    const table = lookupNutrition(l.name);
+    const table = lookupForLine(l.name, l.label);
     const values: Per100 | null = l.custom?.per100 ?? table;
     const pieceGrams = l.custom?.gramsPerUnit ?? table?.piece ?? null;
     relevant++;
@@ -119,7 +137,8 @@ export function computeNutrition(lines: NutritionLine[], servings: number): Nutr
       continue;
     }
     const grams = toGrams(l.quantity, l.unit, l.name, pieceGrams);
-    if (grams === null) {
+    const guessed = (l.unit === null || l.unit === "piece") && !l.custom?.gramsPerUnit;
+    if (grams === null || (guessed && grams / Math.max(servings, 1) > MAX_GUESSED_GRAMS_PER_SERVING)) {
       unknown.push({ ingredientId: l.ingredientId, name: l.name, label: l.label, reason: "poids" });
       continue;
     }
