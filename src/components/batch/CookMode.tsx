@@ -25,6 +25,12 @@ function save(key: string, value: unknown) {
   } catch {}
 }
 
+function clear(key: string) {
+  try {
+    localStorage.removeItem(key);
+  } catch {}
+}
+
 /** Keeps "180 °C", "20 min" together on one line. */
 const nbsp = (s: string) => s.replace(/(\d) (°C|°|min|h|g|kg|cl|ml|l)\b/g, "$1\u00a0$2");
 
@@ -33,9 +39,9 @@ const mmss = (ms: number) => {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 };
 
-export function CookMode({ id, sheet }: { id: number; sheet: BatchSheet }) {
+/** `storeKey` keeps progress across reloads; `exitHref` is where Quitter and Terminé lead. */
+export function CookMode({ storeKey, exitHref, sheet }: { storeKey: string; exitHref: string; sheet: BatchSheet }) {
   const steps = sheet.timeline;
-  const storeKey = `cook-${id}`;
   const [index, setIndex] = useState(0);
   const [timers, setTimers] = useState<Timer[]>([]);
   const [now, setNow] = useState(() => Date.now());
@@ -130,7 +136,7 @@ export function CookMode({ id, sheet }: { id: number; sheet: BatchSheet }) {
   return (
     <div className="mx-auto flex min-h-dvh max-w-2xl flex-col px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3">
       <header className="mb-3 flex items-center justify-between text-sm text-stone-500">
-        <Link href={`/batch/${id}`} className="inline-flex items-center gap-1 rounded-lg px-2 py-1">
+        <Link href={exitHref} className="inline-flex items-center gap-1 rounded-lg px-2 py-1">
           <X className="size-4" aria-hidden /> Quitter
         </Link>
         <span>
@@ -225,7 +231,7 @@ export function CookMode({ id, sheet }: { id: number; sheet: BatchSheet }) {
             <ChevronRight className="ml-1 inline size-5 align-[-4px]" aria-hidden />
           </button>
         ) : (
-          <Link href={`/batch/${id}`} className="rounded-2xl bg-green-600 py-4 text-center text-lg font-semibold text-white">
+          <Link href={exitHref} onClick={() => clear(storeKey)} className="rounded-2xl bg-green-600 py-4 text-center text-lg font-semibold text-white">
             Terminé
             <Check className="ml-1 inline size-5 align-[-4px]" aria-hidden />
           </Link>

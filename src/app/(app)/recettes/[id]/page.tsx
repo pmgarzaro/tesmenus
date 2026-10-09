@@ -1,4 +1,4 @@
-import { Refrigerator, Snowflake } from "lucide-react";
+import { ChefHat, Refrigerator, Snowflake } from "lucide-react";
 import { BackLink } from "@/components/BackLink";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -46,6 +46,12 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
         </div>
       </header>
 
+      {r.steps.length > 0 && (
+        <Link href={`/cuisine/recette/${r.id}`} className="block w-full rounded-[14px] bg-ink py-2.5 text-center font-display font-semibold text-white">
+          <ChefHat className="mr-2 inline size-5 align-[-4px]" aria-hidden />
+          Mode cuisine
+        </Link>
+      )}
       {(r.mealType === "plat" || r.mealType === "autre") && <AddToPlanButton recipeId={r.id} plans={openPlans(householdId)} />}
 
       <dl className="grid grid-cols-3 gap-2 paper p-3 text-center">

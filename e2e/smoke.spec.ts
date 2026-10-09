@@ -30,6 +30,13 @@ test("parcours principal", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Omelette" })).toBeVisible();
   await expect(page.getByText("4 œufs")).toBeVisible();
 
+  // Cook mode straight from the recipe, without planning it
+  await page.getByRole("link", { name: "Mode cuisine" }).click();
+  await expect(page).toHaveURL(/\/cuisine\/recette\/\d+/);
+  await expect(page.getByText("Battre les œufs et cuire 3 min à la poêle.")).toBeVisible();
+  await page.getByRole("link", { name: /Terminé/ }).click();
+  await expect(page.getByRole("heading", { name: "Omelette" })).toBeVisible();
+
   // Calories: an unknown ingredient filled by hand counts in the total
   await expect(page.getByText("aliment inconnu")).toBeVisible();
   const before = Number((await page.getByTestId("kcal").textContent())!.replace(/\D/g, ""));
