@@ -61,6 +61,13 @@ function dish(householdId: number, key: string, recipeId: number, servings: numb
   };
 }
 
+/** Cook mode for one library recipe, without a batch session (nothing saved). */
+export function recipeSheet(householdId: number, recipeId: number): BatchSheet | null {
+  const r = getRecipe(householdId, recipeId);
+  const d = r && dish(householdId, `r${r.id}`, r.id, r.servings, []);
+  return d ? buildSheet([d], today()) : null;
+}
+
 export function createSession(householdId: number, input: SessionInput): { id: number } | { error: string } {
   const dishes: BatchDish[] = [];
   if (input.planId !== null && input.entryIds.length) {

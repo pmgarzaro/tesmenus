@@ -10,5 +10,5 @@ export default async function CookPage({ params }: { params: Promise<{ id: strin
   const { householdId } = await requireUser();
   const session = getSession(householdId, Number((await params).id));
   if (!session) notFound();
-  return <CookMode id={session.id} sheet={session.sheet} />;
+  return <CookMode storeKey={`cook-${session.id}`} exitHref={`/batch/${session.id}`} sheet={session.sheet} />;
 }
