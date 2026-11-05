@@ -1,6 +1,6 @@
 // Meal plans and shopping lists for Claude: create a plan, change a meal,
 // list what to buy for a period. Built on the app's planning and shopping code.
-import { and, desc, eq, gte, lte } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { getDb, schema } from "@/db";
 import { dateSchema } from "@/lib/journal/input";
@@ -11,7 +11,7 @@ import * as plans from "@/lib/planning/repo";
 import { fold, normalizeTags } from "@/lib/recipes/normalize";
 import { getSettings } from "@/lib/settings";
 import { AISLE_ORDER, aggregate, formatItemAmounts } from "@/lib/shopping/aggregate";
-import { linesOf } from "@/lib/shopping/repo";
+import { entriesBetween, linesOf } from "@/lib/shopping/repo";
 
 const TO_APP = { breakfast: "matin", lunch: "midi", dinner: "soir" } as const;
 const TO_API = { matin: "breakfast", midi: "lunch", soir: "dinner" } as const;
@@ -229,28 +229,7 @@ export function setPlannedMeal(owner: Owner, a: SetArgs) {
 export function shoppingListView(owner: Owner, from: string, to: string) {
   if (to < from) throw new JournalError("date_to doit être postérieure ou égale à date_from");
   if (addDays(from, 30) < to) throw new JournalError("Période trop longue : 31 jours maximum");
-  const rows = getDb()
-    .select({ entry: schema.mealPlanEntries, planId: schema.mealPlans.id })
-    .from(schema.mealPlanEntries)
-    .innerJoin(schema.mealPlans, eq(schema.mealPlans.id, schema.mealPlanEntries.planId))
-    .where(
-      and(
-        eq(schema.mealPlans.householdId, owner.householdId),
-        gte(schema.mealPlanEntries.date, from),
-        lte(schema.mealPlanEntries.date, to),
-      ),
-    )
-    .orderBy(desc(schema.mealPlans.id))
-    .all();
-  const seen = new Set<string>();
-  const entries = rows
-    .filter(({ entry }) => {
-      const k = `${entry.date}|${entry.slot}`;
-      if (seen.has(k)) return false;
-      seen.add(k);
-      return true;
-    })
-    .map((r) => r.entry);
+  const entries = entriesBetween(owner.householdId, from, to);
   const lines = linesOf(entries);
   const pantry = new Set(getSettings(owner.householdId).pantry.map(fold));
   const items = aggregate(lines);

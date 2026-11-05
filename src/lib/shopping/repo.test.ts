@@ -111,4 +111,23 @@ describe("shopping list", () => {
     expect(shop.resolvePeriod(p, end, p.startDate).key).toBe("");
     expect(shop.resolvePeriod(p, "nope", null).key).toBe("");
   });
+
+  it("covers the start of the next plan in one trip", () => {
+    // Next plan: Wednesday 7, chili on Wednesday evening.
+    const next = plans.createPlan(h, { startDate: "2026-10-07", days: 2, slots: ["midi", "soir"], constraints: {}, mode: "manual" }).id;
+    const n = plans.getPlan(h, next)!;
+    plans.setEntryRecipe(h, n.entries.find((e) => e.date === "2026-10-07" && e.slot === "soir")!.id, recipeId("Chili con carne"));
+
+    expect(shop.lastPlanEnd(h, plans.getPlan(h, planId)!)).toBe("2026-10-08");
+    // Tuesday (this plan) → Wednesday (next plan): both dinners count, state kept on this plan.
+    const both = shop.getShoppingList(h, planId, "2026-10-06", "2026-10-07")!;
+    expect(both.period).toEqual({ from: "2026-10-06", to: "2026-10-07", key: "2026-10-06_2026-10-07" });
+    expect(new Set(both.items.flatMap((i) => i.recipes))).toEqual(new Set(["Pâtes à la bolognaise", "Chili con carne"]));
+    const ing = both.items[0].ingredientId;
+    expect(shop.setItemState(h, planId, both.period.key, ing, { checked: true })).toBe(true);
+    expect(shop.getShoppingList(h, planId, "2026-10-06", "2026-10-07")!.items.find((i) => i.ingredientId === ing)!.checked).toBe(true);
+    // Never beyond the last plan; the whole plan alone is unchanged.
+    expect(shop.getShoppingList(h, planId, "2026-10-06", "2026-12-31")!.period.to).toBe("2026-10-08");
+    expect(shop.getShoppingList(h, planId)!.period.key).toBe("");
+  });
 });

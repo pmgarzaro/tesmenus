@@ -40,7 +40,7 @@ Tout fonctionne **sans API payante**. Une IA (Google Gemini, utilisable avec sa 
 
 - Calculée **en direct** depuis le planning (elle suit chaque changement) : ingrédients des repas cuisinés, mis à l'échelle des portions ; les repas « restes » et « extérieur » sont ignorés.
 - **Conversions** : g/kg et ml/cl/l additionnés ; cuillères converties en grammes pour les ingrédients courants (sucre, farine, beurre…), en volume pour les liquides ; unités incompatibles affichées côte à côte (« 400 g + 2 boîtes »). Quantités arrondies vers le haut (on n'achète pas 1,5 oignon).
-- **Par période** : « Du … au … » (ou « À partir d'aujourd'hui ») pour ne compter que les repas cuisinés ces jours-là, une course à la fois ; chaque période garde ses propres cases cochées et articles ajoutés. Les restes comptent le jour où le plat est cuisiné.
+- **Par période** : « Du … au … » (ou « À partir d'aujourd'hui ») pour ne compter que les repas cuisinés ces jours-là, une course à la fois ; chaque période garde ses propres cases cochées et articles ajoutés. Les restes comptent le jour où le plat est cuisiné. La période peut déborder sur les plannings suivants (ex. samedi → mardi pour une course à cheval sur deux semaines) ; une période qui commence dans un planning suivant ouvre la liste de ce planning.
 - Regroupée **par rayon**, cases à cocher partagées entre téléphones (rafraîchie au retour dans l'appli), articles ajoutés à la main, « déjà au placard » (cette semaine) ou « toujours au placard » (sel, poivre, eau par défaut), « Tout décocher », **partage / copie en texte**.
 
 ## Batch cooking
