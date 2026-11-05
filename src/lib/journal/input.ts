@@ -64,6 +64,7 @@ export const targetsSchema = z.object({
   proteinG: z.number().min(0).max(1_000),
   carbsG: z.number().min(0).max(2_000).nullable().default(null),
   fatG: z.number().min(0).max(1_000).nullable().default(null),
+  goalWeightKg: z.number().min(20).max(400).nullable().default(null),
   notes: z.string().trim().max(1000).nullable().default(null),
 });
 
@@ -75,5 +76,6 @@ export const DEFAULT_TARGETS = {
   proteinG: 140,
   carbsG: null,
   fatG: null,
+  goalWeightKg: null,
   notes: "Valeurs par défaut (à ajuster).",
 };

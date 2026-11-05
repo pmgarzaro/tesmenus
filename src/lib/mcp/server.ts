@@ -15,8 +15,10 @@ import {
   setTargets,
   updateLogEntry,
 } from "@/lib/journal/repo";
-import { today } from "@/lib/planning/dates";
-import { logEntryView, mealLogView, plannedMeals, recipeView, searchRecipes, targetsView } from "./data";
+import { addDays, today } from "@/lib/planning/dates";
+import { MEASURES } from "@/lib/body/measures";
+import { deleteBodyEntry, saveBodyEntry } from "@/lib/body/repo";
+import { bodyEntryView, bodyLogView, logEntryView, mealLogView, plannedMeals, recipeView, searchRecipes, targetsView } from "./data";
 
 export const SERVER_INFO = { name: "tesmenus", version: "1.0.0" };
 
@@ -24,6 +26,7 @@ const INSTRUCTIONS = `Tes menus : planning de repas, recettes et journal aliment
 Dates au format YYYY-MM-DD, fuseau Europe/Paris ; sans date, c'est aujourd'hui (${"<today>"}).
 Pour « qu'est-ce que je mange ce soir » : get_planned_meals, puis get_recipe avec servings=1 (une portion pour une personne).
 Pour tenir le journal : log_meal avec tes estimations est_kcal, est_protein_g, est_carbs_g (glucides) et est_fat_g (lipides). Pour un bilan : get_meal_log + get_nutrition_targets.
+Poids et mensurations : log_body_measurement pour noter, get_body_measurements pour suivre la tendance (moyenne 7 jours, rythme par semaine, évolution du tour de taille).
 N'appelle set_nutrition_targets que si l'utilisateur le demande explicitement.`;
 
 const optionalDate = dateSchema.optional().describe("Date YYYY-MM-DD (Europe/Paris). Par défaut : aujourd'hui.");
@@ -241,12 +244,13 @@ export function createMcpServer(owner: Owner): McpServer {
       title: "Modifier les objectifs",
       description:
         "Modifie les objectifs quotidiens. À appeler UNIQUEMENT si l'utilisateur le demande explicitement. " +
-        "carbs_g / fat_g omis = inchangés, null = pas d'objectif.",
+        "carbs_g / fat_g / goal_weight_kg omis = inchangés, null = pas d'objectif.",
       inputSchema: {
         kcal_per_day: z.number().min(800).max(10_000),
         protein_g: z.number().min(0).max(1_000),
         carbs_g: z.number().min(0).max(2_000).nullable().optional().describe("Glucides (g / jour)"),
         fat_g: z.number().min(0).max(1_000).nullable().optional().describe("Lipides (g / jour)"),
+        goal_weight_kg: z.number().min(20).max(400).nullable().optional().describe("Poids cible (kg)"),
         notes: z.string().max(1000).nullable().optional().describe("Ex. « calculé sur 85 kg, sédentaire »"),
       },
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
@@ -260,9 +264,72 @@ export function createMcpServer(owner: Owner): McpServer {
             proteinG: a.protein_g,
             carbsG: a.carbs_g === undefined ? current.carbsG : a.carbs_g,
             fatG: a.fat_g === undefined ? current.fatG : a.fat_g,
+            goalWeightKg: a.goal_weight_kg === undefined ? current.goalWeightKg : a.goal_weight_kg,
             notes: a.notes === undefined ? (current.isDefault ? null : current.notes) : a.notes,
           }),
         );
+      }),
+  );
+
+  const measureShape = Object.fromEntries(
+    MEASURES.map((m) => [
+      m.api,
+      z.number().min(m.min).max(m.max).nullable().optional().describe(`${m.label} (${m.unit})`),
+    ]),
+  );
+
+  server.registerTool(
+    "log_body_measurement",
+    {
+      title: "Noter poids / mensurations",
+      description:
+        "Enregistre le poids et/ou des mensurations de l'utilisateur pour un jour (un relevé par jour). " +
+        "Les champs fournis remplacent ceux du même jour, les autres sont conservés ; null efface une valeur. " +
+        "Poids idéalement le matin à jeun ; tour de taille au niveau du nombril.",
+      inputSchema: { date: optionalDate, ...measureShape, notes: z.string().max(1000).nullable().optional() },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    },
+    (a) =>
+      run(() => {
+        const values = Object.fromEntries(MEASURES.map((m) => [m.key, (a as Record<string, unknown>)[m.api]]));
+        return bodyEntryView(saveBodyEntry(owner, { date: a.date ?? today(), ...values, notes: a.notes }));
+      }),
+  );
+
+  server.registerTool(
+    "get_body_measurements",
+    {
+      title: "Suivi du poids et des mensurations",
+      description:
+        "Relevés de poids et mensurations sur une période (90 derniers jours par défaut, 731 jours max), avec : " +
+        "weight_trend (moyenne glissante sur 7 jours, plus fiable que la pesée du jour), " +
+        "summary par mesure (premier / dernier relevé, évolution, rate_per_week sur les 28 derniers jours), " +
+        "latest_weight (toutes dates) et goal_weight_kg. Une perte de gras se voit surtout au tour de taille qui baisse.",
+      inputSchema: {
+        date_from: dateSchema.optional().describe("Début (par défaut : il y a 89 jours)"),
+        date_to: dateSchema.optional().describe("Fin incluse (par défaut : aujourd'hui)"),
+      },
+      annotations: readOnly,
+    },
+    ({ date_from, date_to }) =>
+      run(() => {
+        const to = date_to ?? today();
+        return bodyLogView(owner, date_from ?? addDays(to, -89), to);
+      }),
+  );
+
+  server.registerTool(
+    "delete_body_measurement",
+    {
+      title: "Supprimer un relevé",
+      description: "Supprime le relevé de poids / mensurations d'une date.",
+      inputSchema: { date: dateSchema },
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
+    },
+    ({ date }) =>
+      run(() => {
+        if (!deleteBodyEntry(owner, date)) throw new JournalError(`Aucun relevé le ${date}`);
+        return { deleted: true };
       }),
   );
 

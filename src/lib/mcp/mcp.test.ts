@@ -181,6 +181,9 @@ describe("MCP tools", () => {
         "get_recipe",
         "log_meal",
         "search_recipes",
+        "log_body_measurement",
+        "get_body_measurements",
+        "delete_body_measurement",
         "set_nutrition_targets",
         "update_meal_log",
       ].sort(),
@@ -281,6 +284,29 @@ describe("MCP tools", () => {
 
     // Visible in the app's service for this user only.
     expect(getDb().select().from(schema.mealLog).all().every((e) => e.userId === userId && e.userId !== otherUserId)).toBe(true);
+  });
+
+  it("tracks weight and measurements", async () => {
+    const t = today();
+    const { addDays } = await import("@/lib/planning/dates");
+    await call("log_body_measurement", { date: addDays(t, -14), weight_kg: 86, waist_cm: 98 });
+    await call("log_body_measurement", { date: addDays(t, -7), weight_kg: 85.5 });
+    const now = await call("log_body_measurement", { weight_kg: 85 });
+    expect(now.data).toMatchObject({ date: t, weight_kg: 85, waist_cm: null });
+    expect((await call("log_body_measurement", { waist_cm: 96.5 })).data).toMatchObject({ weight_kg: 85, waist_cm: 96.5 });
+
+    await call("set_nutrition_targets", { kcal_per_day: 2050, protein_g: 140, goal_weight_kg: 78 });
+    const res = await call("get_body_measurements");
+    expect(res.data.entries).toHaveLength(3);
+    expect(res.data.weight_trend.at(-1)).toEqual({ date: t, weight_kg: 85, avg_7d: 85 });
+    expect(res.data.summary.weight_kg).toMatchObject({ change: -1, rate_per_week: -0.5 });
+    expect(res.data.summary.waist_cm).toMatchObject({ change: -1.5 });
+    expect(res.data).toMatchObject({ latest_weight: { date: t, weight_kg: 85 }, goal_weight_kg: 78 });
+
+    expect(await call("delete_body_measurement", { date: t })).toMatchObject({ data: { deleted: true } });
+    expect(await call("delete_body_measurement", { date: t })).toMatchObject({ isError: true });
+    expect(await call("log_body_measurement", { weight_kg: 1000 })).toMatchObject({ isError: true });
+    expect(await call("log_body_measurement", {})).toMatchObject({ isError: true, text: expect.stringMatching(/au moins une mesure/) });
   });
 
   it("reports invalid input as a clear tool error", async () => {

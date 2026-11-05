@@ -112,7 +112,7 @@ describe("food journal", () => {
     expect(j.getTargets(me)).toMatchObject({ kcalPerDay: 2170, proteinG: 140, isDefault: true });
     j.setTargets(me, { kcalPerDay: 2100, proteinG: 140, notes: "85 kg" });
     j.setTargets(me, { kcalPerDay: 2050, proteinG: 150, notes: null });
-    expect(j.getTargets(me)).toEqual({ kcalPerDay: 2050, proteinG: 150, carbsG: null, fatG: null, notes: null, isDefault: false });
+    expect(j.getTargets(me)).toEqual({ kcalPerDay: 2050, proteinG: 150, carbsG: null, fatG: null, goalWeightKg: null, notes: null, isDefault: false });
     j.setTargets(me, { kcalPerDay: 2050, proteinG: 150, carbsG: 220, fatG: 70 });
     expect(j.getTargets(me)).toMatchObject({ carbsG: 220, fatG: 70 });
     expect(j.getTargets(stranger).isDefault).toBe(true);

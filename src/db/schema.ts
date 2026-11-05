@@ -278,9 +278,33 @@ export const nutritionTargets = sqliteTable("nutrition_targets", {
   // Optional: not everyone tracks carbs and fat.
   carbsG: real("carbs_g"),
   fatG: real("fat_g"),
+  goalWeightKg: real("goal_weight_kg"),
   notes: text("notes"),
   updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
 });
+
+/** Weight and body measurements: at most one row per user and day. */
+export const bodyLog = sqliteTable(
+  "body_log",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    date: text("date").notNull(), // YYYY-MM-DD, APP_TIMEZONE
+    weightKg: real("weight_kg"),
+    bodyFatPct: real("body_fat_pct"), // from a smart scale, if any
+    waistCm: real("waist_cm"), // at the navel
+    hipsCm: real("hips_cm"),
+    chestCm: real("chest_cm"),
+    armCm: real("arm_cm"),
+    thighCm: real("thigh_cm"),
+    neckCm: real("neck_cm"),
+    notes: text("notes"),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex("body_log_user_date_idx").on(t.userId, t.date)],
+);
 
 // ---------------------------------------------------------------------------
 // OAuth 2.1 for the MCP server (claude.ai custom connectors). Secrets, codes
