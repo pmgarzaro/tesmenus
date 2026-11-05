@@ -153,3 +153,58 @@ describe("generatePlan", () => {
     expect(generatePlan(BASE, []).warnings[0]).toMatch(/Aucune recette/);
   });
 });
+
+describe("breakfast", () => {
+  const BREAKFASTS = [
+    R(20, ["sucré"], 10, { mealType: "petit-dejeuner" }),
+    R(21, ["salé"], 25, { mealType: "petit-dejeuner" }),
+    R(22, ["poisson"], 15, { mealType: "petit-dejeuner" }),
+  ];
+  const all = [...LIBRARY, ...BREAKFASTS];
+  const breakfastIds = BREAKFASTS.map((r) => r.id);
+  const morning = (p: ReturnType<typeof generatePlan>) => p.entries.filter((e) => e.slot === "matin");
+
+  it("plans breakfasts with breakfast recipes only, first in the day", () => {
+    const p = generatePlan({ ...BASE, slots: ["matin", "midi", "soir"] }, all);
+    expect(p.entries.slice(0, 3).map((e) => e.slot)).toEqual(["matin", "midi", "soir"]);
+    expect(morning(p)).toHaveLength(5);
+    expect(morning(p).every((e) => breakfastIds.includes(e.recipeId!) && e.servings === 2 && !e.isLeftover)).toBe(true);
+    // No breakfast recipe at lunch / dinner, and consecutive breakfasts vary.
+    expect(p.entries.filter((e) => e.slot !== "matin" && breakfastIds.includes(e.recipeId!))).toEqual([]);
+    expect(morning(p).some((e, i, a) => i > 0 && e.recipeId === a[i - 1].recipeId)).toBe(false);
+    expect(p.warnings).toEqual([]);
+  });
+
+  it("prepares one breakfast for several mornings", () => {
+    const p = generatePlan({ ...BASE, slots: ["matin"], breakfastDays: 3 }, all);
+    const m = morning(p);
+    expect(m.map((e) => (e.isLeftover ? "R" : "C"))).toEqual(["C", "R", "R", "C", "R"]);
+    expect(m[0].servings).toBe(6); // 2 people × 3 mornings
+    expect(m[3].servings).toBe(4); // only 2 mornings left
+    expect(m[1].sourceKey).toBe(cellKey("2026-10-05", "matin"));
+    expect(m[4].sourceKey).toBe(cellKey("2026-10-08", "matin"));
+  });
+
+  it("respects excluded tags, fixed meals and included recipes", () => {
+    const p = generatePlan(
+      {
+        ...BASE,
+        slots: ["matin"],
+        constraints: { excludeTags: ["poisson"], include: [21] },
+        fixed: { [cellKey("2026-10-07", "matin")]: 20 },
+      },
+      all,
+    );
+    const m = morning(p);
+    expect(m[0].recipeId).toBe(21);
+    expect(m.some((e) => e.recipeId === 22)).toBe(false);
+    expect(m[2].recipeId).toBe(20);
+  });
+
+  it("warns when there is no breakfast recipe", () => {
+    const p = generatePlan({ ...BASE, slots: ["matin", "soir"] }, LIBRARY);
+    expect(morning(p).every((e) => e.recipeId === null)).toBe(true);
+    expect(p.warnings.join(" ")).toMatch(/Petit-déjeuner/);
+    expect(p.entries.filter((e) => e.slot === "soir").every((e) => e.recipeId !== null)).toBe(true);
+  });
+});

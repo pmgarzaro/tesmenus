@@ -5,7 +5,9 @@ import { useMemo, useState, useTransition } from "react";
 import { createPlanAction } from "@/app/(app)/planning/actions";
 import { fold } from "@/lib/recipes/normalize";
 import { dateRange, shortDate } from "@/lib/planning/dates";
-import { formatMinutes } from "@/lib/labels";
+import { SLOTS } from "@/db/schema";
+import { SLOT_LABELS, formatMinutes } from "@/lib/labels";
+import type { Slot } from "@/lib/planning/generate";
 
 type Recipe = { id: number; title: string; totalMinutes: number };
 const MAX_TIMES = [15, 20, 30, 45, 60, 90];
@@ -18,7 +20,7 @@ export function NewPlanForm({
   tags,
   aiAvailable,
 }: {
-  defaults: { startDate: string; days: number; slots: ("midi" | "soir")[] };
+  defaults: { startDate: string; days: number; slots: Slot[] };
   recipes: Recipe[];
   tags: string[];
   aiAvailable: boolean;
@@ -101,10 +103,10 @@ export function NewPlanForm({
         </div>
         <div className="flex items-center gap-4 text-sm">
           <span className="text-stone-600">Repas :</span>
-          {(["midi", "soir"] as const).map((s) => (
-            <label key={s} className="flex items-center gap-1.5 capitalize">
+          {SLOTS.map((s) => (
+            <label key={s} className="flex items-center gap-1.5">
               <input type="checkbox" checked={slots.includes(s)} onChange={() => setSlots(toggle(slots, s))} className="size-5 accent-brand-600" />
-              {s}
+              {SLOT_LABELS[s]}
             </label>
           ))}
         </div>

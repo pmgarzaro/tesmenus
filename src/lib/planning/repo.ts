@@ -11,9 +11,11 @@ import {
   type Slot,
   cellKey,
   generatePlan,
+  isBreakfast,
+  slotOrder,
 } from "./generate";
 
-type StoredOptions = Pick<PlanOptions, "slots" | "people" | "servingsPerRecipe" | "dinnerCoversNextLunch"> & {
+type StoredOptions = Pick<PlanOptions, "slots" | "people" | "servingsPerRecipe" | "dinnerCoversNextLunch" | "breakfastDays"> & {
   constraints: PlanConstraints;
 };
 
@@ -59,6 +61,7 @@ function optionsOf(plan: Plan): PlanOptions {
     people: o.people ?? 2,
     servingsPerRecipe: o.servingsPerRecipe ?? 4,
     dinnerCoversNextLunch: o.dinnerCoversNextLunch ?? true,
+    breakfastDays: o.breakfastDays ?? 1,
     constraints: o.constraints ?? {},
   };
 }
@@ -107,6 +110,7 @@ export function createPlan(householdId: number, input: NewPlanInput): { id: numb
     people: s.people,
     servingsPerRecipe: s.servingsPerRecipe,
     dinnerCoversNextLunch: s.dinnerCoversNextLunch,
+    breakfastDays: s.breakfastDays,
     constraints: input.constraints,
   };
   const plan = getDb()
@@ -119,7 +123,7 @@ export function createPlan(householdId: number, input: NewPlanInput): { id: numb
       .insert(schema.mealPlanEntries)
       .values(
         dateRange(input.startDate, input.days).flatMap((date) =>
-          (["midi", "soir"] as const).filter((slot) => input.slots.includes(slot)).map((slot) => ({ planId: plan.id, date, slot })),
+          (["matin", "midi", "soir"] as const).filter((slot) => input.slots.includes(slot)).map((slot) => ({ planId: plan.id, date, slot })),
         ),
       )
       .run();
@@ -149,7 +153,7 @@ export function getPlan(householdId: number, planId: number) {
     .select()
     .from(schema.mealPlanEntries)
     .where(eq(schema.mealPlanEntries.planId, planId))
-    .orderBy(asc(schema.mealPlanEntries.date), asc(schema.mealPlanEntries.slot)) // midi before soir
+    .orderBy(asc(schema.mealPlanEntries.date), asc(schema.mealPlanEntries.slot)) // matin, midi, soir
     .all();
   const recipeIds = [...new Set(entries.map((e) => e.recipeId).filter((x): x is number => x !== null))];
   const recipes = recipeIds.length
@@ -295,7 +299,7 @@ function linkNextLunch(plan: Plan, dinner: { id: number; date: string; slot: str
  */
 export function fillEmptyEntries(householdId: number, planId: number, onlyIds?: number[]): string[] | null {
   const warnings: string[] = [];
-  for (const slot of ["soir", "midi"] as const) {
+  for (const slot of ["soir", "midi", "matin"] as const) {
     const plan = getPlan(householdId, planId);
     if (!plan) return null;
     const isEmpty = (e: PlanEntryView) => !e.recipeId && !e.isLeftover && !e.isEatingOut;
@@ -313,6 +317,7 @@ export function fillEmptyEntries(householdId: number, planId: number, onlyIds?: 
       {
         ...plan.options,
         dinnerCoversNextLunch: false,
+        breakfastDays: 1,
         fixed,
         recentRecipeIds: recentRecipeIds(householdId, plan.startDate, plan.id),
         seed: randomSeed(),
@@ -346,6 +351,7 @@ export function syncOpenPlansWithSettings(householdId: number): number {
       people: s.people,
       servingsPerRecipe: s.servingsPerRecipe,
       dinnerCoversNextLunch: s.dinnerCoversNextLunch,
+      breakfastDays: s.breakfastDays,
     };
     getDb().update(schema.mealPlans).set({ options }).where(eq(schema.mealPlans.id, plan.id)).run();
     if (s.dinnerCoversNextLunch) continue;
@@ -359,7 +365,8 @@ export function syncOpenPlansWithSettings(householdId: number): number {
           gte(schema.mealPlanEntries.date, t),
         ),
       )
-      .all();
+      .all()
+      .filter((l) => !isBreakfast(l.slot)); // breakfast batches have their own setting
     if (leftovers.length === 0) continue;
     for (const l of leftovers) {
       update(l.id, { isLeftover: false, sourceEntryId: null, recipeId: null, servings: null });
@@ -389,8 +396,10 @@ export function setLeftover(householdId: number, entryId: number, sourceEntryId:
   const owned = ownedEntry(householdId, entryId);
   const source = ownedEntry(householdId, sourceEntryId);
   if (!owned || !source || source.plan.id !== owned.plan.id || !source.entry.recipeId) return false;
-  const before = (e: { date: string; slot: string }) => `${e.date}|${e.slot === "midi" ? 0 : 1}`;
+  const before = (e: { date: string; slot: Slot }) => `${e.date}|${slotOrder(e.slot)}`;
   if (before(source.entry) >= before(owned.entry)) return false;
+  // Breakfast leftovers feed breakfasts only, and the other way round.
+  if (isBreakfast(source.entry.slot) !== isBreakfast(owned.entry.slot)) return false;
   releaseDependents(entryId);
   update(entryId, { recipeId: null, isLeftover: true, isEatingOut: false, sourceEntryId, servings: null });
   // The cooked meal now has to feed one more meal.
@@ -419,6 +428,7 @@ export function rerollEntry(householdId: number, entryId: number): boolean {
   const options: PlanOptions = {
     ...plan.options,
     dinnerCoversNextLunch: false,
+    breakfastDays: 1,
     fixed,
     avoid: owned.entry.recipeId ? [owned.entry.recipeId] : [],
     recentRecipeIds: recentRecipeIds(householdId, plan.startDate, plan.id),
@@ -435,6 +445,7 @@ export function swapEntries(householdId: number, aId: number, bId: number): bool
   const a = ownedEntry(householdId, aId);
   const b = ownedEntry(householdId, bId);
   if (!a || !b || a.plan.id !== b.plan.id || a.entry.isLeftover || b.entry.isLeftover) return false;
+  if (isBreakfast(a.entry.slot) !== isBreakfast(b.entry.slot)) return false;
   const pick = (e: typeof a.entry) => ({ recipeId: e.recipeId, isEatingOut: e.isEatingOut, servings: e.servings });
   getDb().transaction(() => {
     update(aId, pick(b.entry));

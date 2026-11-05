@@ -31,8 +31,8 @@ export default async function PlanPage({
   } catch {}
 
   const recipes = listRecipeSummaries(householdId)
-    .filter((r) => r.mealType === "plat" || r.mealType === "autre")
-    .map((r) => ({ id: r.id, title: r.title, minutes: totalMinutes(r), tags: r.tags }));
+    .filter((r) => r.mealType === "plat" || r.mealType === "autre" || r.mealType === "petit-dejeuner")
+    .map((r) => ({ id: r.id, title: r.title, minutes: totalMinutes(r), tags: r.tags, breakfast: r.mealType === "petit-dejeuner" }));
   const entries = plan.entries.map((e) => ({
     id: e.id,
     date: e.date,
