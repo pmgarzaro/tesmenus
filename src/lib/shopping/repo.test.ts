@@ -45,11 +45,11 @@ describe("shopping list", () => {
 
   it("keeps checked / removed state, manual items and the pantry", () => {
     const beef = item(shop.getShoppingList(h, planId)!, "bœuf haché").ingredientId;
-    expect(shop.setItemState(h, planId, beef, { checked: true })).toBe(true);
+    expect(shop.setItemState(h, planId, "", beef, { checked: true })).toBe(true);
     const cumin = item(shop.getShoppingList(h, planId)!, "cumin").ingredientId;
-    shop.setItemState(h, planId, cumin, { removed: true });
-    expect(shop.addManualItem(h, planId, "Papier toilette")).toBe(true);
-    expect(shop.addManualItem(h, planId, "2 citrons")).toBe(true);
+    shop.setItemState(h, planId, "", cumin, { removed: true });
+    expect(shop.addManualItem(h, planId, "", "Papier toilette")).toBe(true);
+    expect(shop.addManualItem(h, planId, "", "2 citrons")).toBe(true);
     shop.setPantry(h, "huile d'olive", true);
 
     let list = shop.getShoppingList(h, planId)!;
@@ -59,7 +59,7 @@ describe("shopping list", () => {
     expect(list.manual.map((m) => [m.label, m.aisle])).toEqual([["Papier toilette", "epicerie"], ["2 citrons", "fruits-legumes"]]);
 
     shop.setManualChecked(h, planId, list.manual[0].id, true);
-    expect(shop.uncheckAll(h, planId)).toBe(true);
+    expect(shop.uncheckAll(h, planId, "")).toBe(true);
     list = shop.getShoppingList(h, planId)!;
     expect(item(list, "bœuf haché").checked).toBe(false);
     expect(list.manual[0].checked).toBe(false);
@@ -67,8 +67,8 @@ describe("shopping list", () => {
     expect(shop.getShoppingList(h, planId)!.manual).toHaveLength(1);
 
     // Other household can't touch anything.
-    expect(shop.setItemState(other, planId, beef, { checked: true })).toBe(false);
-    expect(shop.addManualItem(other, planId, "x")).toBe(false);
+    expect(shop.setItemState(other, planId, "", beef, { checked: true })).toBe(false);
+    expect(shop.addManualItem(other, planId, "", "x")).toBe(false);
     expect(shop.deleteManualItem(other, planId, list.manual[0].id)).toBe(false);
   });
 
@@ -78,5 +78,37 @@ describe("shopping list", () => {
     const list = shop.getShoppingList(h, planId)!;
     expect(item(list, "bœuf haché").amount).toBe("500 g");
     expect(list.items.some((i) => i.name === "spaghetti")).toBe(false);
+  });
+
+  it("lists only the meals cooked in a period, with its own ticks", () => {
+    let p = plans.getPlan(h, planId)!;
+    plans.setEntryRecipe(h, p.entries.find((e) => e.date === "2026-10-06" && e.slot === "soir")!.id, recipeId("Pâtes à la bolognaise"));
+    p = plans.getPlan(h, planId)!;
+    // Tuesday: chili leftovers at lunch don't bring the chili back.
+    expect(new Set(shop.getShoppingList(h, planId, "2026-10-06", "2026-10-06")!.items.flatMap((i) => i.recipes))).toEqual(
+      new Set(["Pâtes à la bolognaise"]),
+    );
+    const end = p.entries.at(-1)!.date;
+    const whole = shop.getShoppingList(h, planId)!;
+    expect(whole.period).toEqual({ from: p.startDate, to: end, key: "" });
+
+    const first = shop.getShoppingList(h, planId, p.startDate, p.startDate)!;
+    expect(first.period.key).toBe(`${p.startDate}_${p.startDate}`);
+    const cookedFirstDay = new Set(
+      p.entries.filter((e) => e.date === p.startDate && !e.isLeftover && !e.isEatingOut && e.recipe).map((e) => e.recipe!.title),
+    );
+    expect(new Set(first.items.flatMap((i) => i.recipes))).toEqual(cookedFirstDay);
+    expect(new Set(whole.items.flatMap((i) => i.recipes)).size).toBeGreaterThan(cookedFirstDay.size);
+
+    // Ticks are per period.
+    const ing = first.items[0].ingredientId;
+    shop.setItemState(h, planId, first.period.key, ing, { checked: true });
+    expect(shop.getShoppingList(h, planId, p.startDate, p.startDate)!.items[0].checked).toBe(true);
+    expect(shop.getShoppingList(h, planId)!.items.find((i) => i.ingredientId === ing)?.checked ?? false).toBe(false);
+
+    // Clamped to the plan, reversed dates swapped, whole plan = "".
+    expect(shop.resolvePeriod(p, "2000-01-01", "2100-01-01").key).toBe("");
+    expect(shop.resolvePeriod(p, end, p.startDate).key).toBe("");
+    expect(shop.resolvePeriod(p, "nope", null).key).toBe("");
   });
 });

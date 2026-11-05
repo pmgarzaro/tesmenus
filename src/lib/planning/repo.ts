@@ -3,7 +3,7 @@ import { getDb, schema } from "@/db";
 import { listRecipeSummaries } from "@/lib/recipes/repo";
 import { totalMinutes } from "@/lib/recipes/search";
 import { getSettings } from "@/lib/settings";
-import { addDays, dateRange, today } from "./dates";
+import { addDays, dateRange, defaultStartDate, longDate, today } from "./dates";
 import {
   type PlanConstraints,
   type PlanOptions,
@@ -473,4 +473,39 @@ export function openPlans(householdId: number) {
         })),
       };
     });
+}
+
+// ---------------------------------------------------------------------------
+// Several weeks: plans must not overlap, the next one starts after the last.
+
+const planEnd = (p: { startDate: string; days: number }) => addDays(p.startDate, p.days - 1);
+
+/** Start suggested for a new plan: the day after the last plan still running, else the usual default. */
+export function nextFreeStartDate(householdId: number): string {
+  const t = today();
+  const lastEnd = listPlans(householdId)
+    .map(planEnd)
+    .filter((end) => end >= t)
+    .sort()
+    .at(-1);
+  return lastEnd ? addDays(lastEnd, 1) : defaultStartDate(t);
+}
+
+/** Why these dates cannot be used (they overlap another plan), or null. */
+export function overlapMessage(householdId: number, startDate: string, days: number): string | null {
+  const end = addDays(startDate, days - 1);
+  const other = listPlans(householdId).find((p) => p.startDate <= end && startDate <= planEnd(p));
+  if (!other) return null;
+  return (
+    `Ces dates chevauchent le planning du ${longDate(other.startDate)} au ${longDate(planEnd(other))}. ` +
+    `Commence le ${longDate(nextFreeStartDate(householdId))}, ou supprime d'abord l'autre planning.`
+  );
+}
+
+/** Plans just before and after this one, for week-to-week navigation. */
+export function adjacentPlans(householdId: number, planId: number) {
+  const plans = [...listPlans(householdId)].sort((a, b) => a.startDate.localeCompare(b.startDate) || a.id - b.id);
+  const i = plans.findIndex((p) => p.id === planId);
+  if (i < 0) return { previous: null, next: null };
+  return { previous: plans[i - 1] ?? null, next: plans[i + 1] ?? null };
 }

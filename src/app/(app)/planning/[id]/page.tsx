@@ -1,4 +1,4 @@
-import { CookingPot, ShoppingCart } from "lucide-react";
+import { ChevronLeft, ChevronRight, CookingPot, ShoppingCart } from "lucide-react";
 import { BackLink } from "@/components/BackLink";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -8,7 +8,7 @@ import { PlanActions } from "@/components/planning/PlanActions";
 import { PlanGrid } from "@/components/planning/PlanGrid";
 import { requireUser } from "@/lib/auth";
 import { addDays, longDate, today } from "@/lib/planning/dates";
-import { getPlan } from "@/lib/planning/repo";
+import { adjacentPlans, getPlan } from "@/lib/planning/repo";
 import { listRecipeSummaries } from "@/lib/recipes/repo";
 import { totalMinutes } from "@/lib/recipes/search";
 
@@ -45,6 +45,9 @@ export default async function PlanPage({
     source: e.source,
     recipe: e.recipe && { id: e.recipe.id, title: e.recipe.title, tags: e.recipe.tags, minutes: totalMinutes(e.recipe) },
   }));
+  const { previous, next } = adjacentPlans(householdId, plan.id);
+  const end = addDays(plan.startDate, plan.days - 1);
+  const pill = "inline-flex items-center gap-0.5 rounded-full bg-white px-3 py-1.5 text-sm shadow-sm";
   const cooked = entries.filter((e) => e.recipe && !e.isLeftover).length;
   const empty = entries.filter((e) => !e.recipe && !e.isEatingOut).length;
 
@@ -63,6 +66,28 @@ export default async function PlanPage({
           {cooked} repas à cuisiner · {entries.filter((e) => e.isLeftover).length} repas de restes
           {empty > 0 && ` · ${empty} à choisir`}
         </p>
+        {(previous || next || end >= today()) && (
+          <nav className="flex flex-wrap items-center justify-between gap-2" aria-label="Autres semaines">
+            {previous ? (
+              <Link href={`/planning/${previous.id}`} className={pill}>
+                <ChevronLeft className="size-4" aria-hidden /> Semaine du {longDate(previous.startDate)}
+              </Link>
+            ) : (
+              <span />
+            )}
+            {next ? (
+              <Link href={`/planning/${next.id}`} className={pill}>
+                Semaine du {longDate(next.startDate)} <ChevronRight className="size-4" aria-hidden />
+              </Link>
+            ) : (
+              end >= today() && (
+                <Link href="/planning/nouveau" className={`${pill} font-semibold text-brand-700`}>
+                  Préparer la suite <ChevronRight className="size-4" aria-hidden />
+                </Link>
+              )
+            )}
+          </nav>
+        )}
         <PlanActions planId={plan.id} emptyCount={empty} templateName={`Semaine du ${longDate(plan.startDate)}`} />
       </header>
       {warnings.length > 0 && (

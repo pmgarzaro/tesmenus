@@ -2,8 +2,8 @@ import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
 import { requireUser } from "@/lib/auth";
 import { TemplateList } from "@/components/planning/TemplateList";
-import { addDays, defaultStartDate, longDate, today } from "@/lib/planning/dates";
-import { listPlans } from "@/lib/planning/repo";
+import { addDays, longDate, today } from "@/lib/planning/dates";
+import { listPlans, nextFreeStartDate } from "@/lib/planning/repo";
 import { listTemplates } from "@/lib/planning/templates";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +21,7 @@ export default async function HistoryPage() {
       />
       {templates.length > 0 && (
         <div className="mb-5">
-          <TemplateList templates={templates} defaultStart={defaultStartDate()} />
+          <TemplateList templates={templates} defaultStart={nextFreeStartDate(householdId)} />
           <h2 className="mt-5 font-display text-xl font-bold">Mes plannings</h2>
         </div>
       )}
