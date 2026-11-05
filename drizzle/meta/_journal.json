@@ -57,6 +57,13 @@
       "when": 1793886963299,
       "tag": "0007_mcp_journal",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1793888061528,
+      "tag": "0008_macros",
+      "breakpoints": true
     }
   ]
 }

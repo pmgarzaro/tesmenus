@@ -20,7 +20,17 @@ function slotForNow(): LogSlot {
   return "dinner";
 }
 
-function Meter({ label, value, target, unit }: { label: string; value: number; target: number; unit: string }) {
+function Meter({ label, value, target, unit }: { label: string; value: number; target: number | null; unit: string }) {
+  if (target === null) {
+    return (
+      <div className="flex items-baseline justify-between text-sm">
+        <span className="font-medium">{label}</span>
+        <span>
+          <strong className="text-base">{Math.round(value)}</strong> {unit}
+        </span>
+      </div>
+    );
+  }
   const pct = target > 0 ? Math.min(100, (value / target) * 100) : 0;
   const over = value > target;
   return (
@@ -60,6 +70,8 @@ export default async function JournalPage({ searchParams }: { searchParams: Prom
         name: m.recipe_name!,
         kcal: trusted ? n.kcal : null,
         protein: trusted ? n.protein_g : null,
+        carbs: trusted ? n.carbs_g : null,
+        fat: trusted ? n.fat_g : null,
       };
     });
 
@@ -90,6 +102,13 @@ export default async function JournalPage({ searchParams }: { searchParams: Prom
       <section className="paper space-y-3 p-4">
         <Meter label="Calories" value={day?.estKcal ?? 0} target={targets.kcalPerDay} unit="kcal" />
         <Meter label="Protéines" value={day?.estProteinG ?? 0} target={targets.proteinG} unit="g" />
+        <Meter label="Glucides" value={day?.estCarbsG ?? 0} target={targets.carbsG} unit="g" />
+        <Meter label="Lipides" value={day?.estFatG ?? 0} target={targets.fatG} unit="g" />
+        {day && day.entriesWithoutEstimate === 0 && day.entriesWithoutMacros > 0 && (
+          <p className="text-xs text-stone-500">
+            {day.entriesWithoutMacros} repas sans glucides ou lipides : ces totaux sont incomplets.
+          </p>
+        )}
         {day && day.entriesWithoutEstimate > 0 && (
           <p className="text-xs text-stone-500">
             {day.entriesWithoutEstimate} repas sans estimation, non compté{day.entriesWithoutEstimate > 1 ? "s" : ""}. Demande à
@@ -129,6 +148,13 @@ export default async function JournalPage({ searchParams }: { searchParams: Prom
                     <p className="text-sm text-stone-600">
                       {e.estKcal !== null ? `${Math.round(e.estKcal)} kcal` : "kcal ?"} ·{" "}
                       {e.estProteinG !== null ? `${Math.round(e.estProteinG)} g prot.` : "prot. ?"}
+                      {(e.estCarbsG !== null || e.estFatG !== null) && (
+                        <>
+                          {" "}
+                          · {e.estCarbsG !== null ? `${Math.round(e.estCarbsG)} g gluc.` : "gluc. ?"} ·{" "}
+                          {e.estFatG !== null ? `${Math.round(e.estFatG)} g lip.` : "lip. ?"}
+                        </>
+                      )}
                     </p>
                     {e.notes && <p className="text-sm text-stone-500">{e.notes}</p>}
                   </div>
@@ -149,9 +175,16 @@ export default async function JournalPage({ searchParams }: { searchParams: Prom
       <details className="paper mt-4 p-4">
         <summary className="cursor-pointer font-semibold">
           Mes objectifs : {Math.round(targets.kcalPerDay)} kcal · {Math.round(targets.proteinG)} g de protéines
+          {targets.carbsG !== null && ` · ${Math.round(targets.carbsG)} g de glucides`}
+          {targets.fatG !== null && ` · ${Math.round(targets.fatG)} g de lipides`}
         </summary>
         {targets.notes && <p className="mt-2 text-sm text-stone-500">{targets.notes}</p>}
-        <TargetsForm kcal={targets.kcalPerDay} protein={targets.proteinG} notes={targets.isDefault ? null : targets.notes} />
+        <TargetsForm
+          kcal={targets.kcalPerDay}
+          protein={targets.proteinG}
+          carbs={targets.carbsG}
+          fat={targets.fatG}
+          notes={targets.isDefault ? null : targets.notes} />
       </details>
     </>
   );

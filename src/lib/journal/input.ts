@@ -25,7 +25,7 @@ export const slotSchema = z.enum(LOG_SLOTS, {
 });
 
 const kcal = z.number().min(0).max(10_000);
-const protein = z.number().min(0).max(1_000);
+const grams = z.number().min(0).max(1_000);
 
 /** Fields of a journal entry, as accepted on creation. */
 export const logEntrySchema = z.object({
@@ -35,11 +35,13 @@ export const logEntrySchema = z.object({
   recipeId: z.number().int().positive().nullable().default(null),
   servings: z.number().gt(0).max(50).nullable().default(null),
   estKcal: kcal.nullable().default(null),
-  estProteinG: protein.nullable().default(null),
+  estProteinG: grams.nullable().default(null),
+  estCarbsG: grams.nullable().default(null),
+  estFatG: grams.nullable().default(null),
   notes: z.string().trim().max(1000).nullable().default(null),
 });
 
-export type LogEntryInput = z.infer<typeof logEntrySchema>;
+export type LogEntryInput = z.input<typeof logEntrySchema>;
 
 /** Every field optional: only the given ones are changed. */
 export const logEntryPatchSchema = z.object({
@@ -49,7 +51,9 @@ export const logEntryPatchSchema = z.object({
   recipeId: z.number().int().positive().nullable().optional(),
   servings: z.number().gt(0).max(50).nullable().optional(),
   estKcal: kcal.nullable().optional(),
-  estProteinG: protein.nullable().optional(),
+  estProteinG: grams.nullable().optional(),
+  estCarbsG: grams.nullable().optional(),
+  estFatG: grams.nullable().optional(),
   notes: z.string().trim().max(1000).nullable().optional(),
 });
 
@@ -58,14 +62,18 @@ export type LogEntryPatch = z.infer<typeof logEntryPatchSchema>;
 export const targetsSchema = z.object({
   kcalPerDay: z.number().min(800).max(10_000),
   proteinG: z.number().min(0).max(1_000),
+  carbsG: z.number().min(0).max(2_000).nullable().default(null),
+  fatG: z.number().min(0).max(1_000).nullable().default(null),
   notes: z.string().trim().max(1000).nullable().default(null),
 });
 
-export type TargetsInput = z.infer<typeof targetsSchema>;
+export type TargetsInput = z.input<typeof targetsSchema>;
 
 /** Default targets until the user sets their own. */
 export const DEFAULT_TARGETS = {
   kcalPerDay: 2170,
   proteinG: 140,
+  carbsG: null,
+  fatG: null,
   notes: "Valeurs par défaut (à ajuster).",
 };

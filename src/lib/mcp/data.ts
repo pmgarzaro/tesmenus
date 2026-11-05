@@ -124,6 +124,8 @@ export function recipeView(owner: Owner, recipeId: number, servings?: number, in
         ? {
             kcal: round(n.perServing.kcal),
             protein_g: round(n.perServing.protein, 1),
+            carbs_g: round(n.perServing.carbs, 1),
+            fat_g: round(n.perServing.fat, 1),
             coverage: round(n.coverage, 2),
             not_counted: n.unknown.map((u) => u.label),
           }
@@ -151,6 +153,8 @@ export function logEntryView(e: LogEntry) {
     servings: e.servings,
     est_kcal: e.estKcal,
     est_protein_g: e.estProteinG,
+    est_carbs_g: e.estCarbsG,
+    est_fat_g: e.estFatG,
     notes: e.notes,
   };
 }
@@ -165,12 +169,22 @@ export function mealLogView(owner: Owner, dateFrom: string, dateTo?: string) {
       date: t.date,
       est_kcal: t.estKcal,
       est_protein_g: t.estProteinG,
+      est_carbs_g: t.estCarbsG,
+      est_fat_g: t.estFatG,
       entries: t.entries,
       entries_without_estimate: t.entriesWithoutEstimate,
+      entries_without_macros: t.entriesWithoutMacros,
     })),
   };
 }
 
 export function targetsView(t: Targets) {
-  return { kcal_per_day: t.kcalPerDay, protein_g: t.proteinG, notes: t.notes, is_default: t.isDefault };
+  return {
+    kcal_per_day: t.kcalPerDay,
+    protein_g: t.proteinG,
+    carbs_g: t.carbsG,
+    fat_g: t.fatG,
+    notes: t.notes,
+    is_default: t.isDefault,
+  };
 }
