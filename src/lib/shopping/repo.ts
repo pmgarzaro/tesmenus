@@ -1,8 +1,36 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { fold, guessAisle, parseIngredientLine } from "@/lib/recipes/normalize";
+import { addDays, isValidDate } from "@/lib/planning/dates";
 import { getSettings, saveSettings } from "@/lib/settings";
 import { type NeedLine, type ShoppingItem, aggregate, formatItemAmounts } from "./aggregate";
+
+// ---------------------------------------------------------------------------
+// Periods: a list can cover only the meals cooked between two dates of the
+// plan (one shopping trip). Each period keeps its own ticks and extra items.
+
+export type Period = { from: string; to: string; key: string };
+
+/**
+ * The period of a plan to shop for, clamped to the plan's dates. Missing or
+ * invalid dates mean the whole plan (key "").
+ */
+export function resolvePeriod(plan: { startDate: string; days: number }, from?: string | null, to?: string | null): Period {
+  const start = plan.startDate;
+  const end = addDays(start, plan.days - 1);
+  const clamp = (d: string | null | undefined, fallback: string) =>
+    d && isValidDate(d) ? (d < start ? start : d > end ? end : d) : fallback;
+  let f = clamp(from, start);
+  let t = clamp(to, end);
+  if (t < f) [f, t] = [t, f];
+  return { from: f, to: t, key: f === start && t === end ? "" : `${f}_${t}` };
+}
+
+/** Period from its stored key, for a given plan. */
+export function periodFromKey(plan: { startDate: string; days: number }, key: string): Period {
+  const [from, to] = key.split("_");
+  return resolvePeriod(plan, from, to);
+}
 
 function ownedPlan(householdId: number, planId: number) {
   return getDb()
@@ -12,15 +40,26 @@ function ownedPlan(householdId: number, planId: number) {
     .get();
 }
 
-/** Every ingredient of every cooked meal of the plan, scaled to its servings (leftovers ignored). */
-export function needLines(planId: number): NeedLine[] {
+/**
+ * Every ingredient of every meal cooked in the plan (optionally only between
+ * `from` and `to`), scaled to its servings. Leftover meals are ignored: their
+ * ingredients count on the day they are cooked.
+ */
+export function needLines(planId: number, from?: string, to?: string): NeedLine[] {
   const db = getDb();
   const entries = db
     .select()
     .from(schema.mealPlanEntries)
     .where(eq(schema.mealPlanEntries.planId, planId))
     .all()
-    .filter((e) => e.recipeId !== null && !e.isLeftover && !e.isEatingOut);
+    .filter((e) => (!from || e.date >= from) && (!to || e.date <= to));
+  return linesOf(entries);
+}
+
+/** Ingredient lines of planned meals (entries of any plan). */
+export function linesOf(planEntries: (typeof schema.mealPlanEntries.$inferSelect)[]): NeedLine[] {
+  const db = getDb();
+  const entries = planEntries.filter((e) => e.recipeId !== null && !e.isLeftover && !e.isEatingOut);
   const recipeIds = [...new Set(entries.map((e) => e.recipeId!))];
   if (recipeIds.length === 0) return [];
   const recipes = new Map(
@@ -66,14 +105,18 @@ export function needLines(planId: number): NeedLine[] {
 export type ListItem = ShoppingItem & { amount: string; checked: boolean; removed: boolean; pantry: boolean };
 export type ManualItem = { id: number; label: string; aisle: ShoppingItem["aisle"]; checked: boolean };
 
-export function getShoppingList(householdId: number, planId: number) {
+const inList = (planId: number, period: string) =>
+  and(eq(schema.shoppingListItems.planId, planId), eq(schema.shoppingListItems.period, period));
+
+export function getShoppingList(householdId: number, planId: number, from?: string | null, to?: string | null) {
   const plan = ownedPlan(householdId, planId);
   if (!plan) return null;
-  const rows = getDb().select().from(schema.shoppingListItems).where(eq(schema.shoppingListItems.planId, planId)).all();
+  const period = resolvePeriod(plan, from, to);
+  const rows = getDb().select().from(schema.shoppingListItems).where(inList(planId, period.key)).all();
   const state = new Map(rows.filter((r) => !r.manual && r.ingredientId).map((r) => [r.ingredientId!, r]));
   const pantry = new Set(getSettings(householdId).pantry.map(fold));
 
-  const items: ListItem[] = aggregate(needLines(planId)).map((i) => ({
+  const items: ListItem[] = aggregate(needLines(planId, period.from, period.to)).map((i) => ({
     ...i,
     amount: formatItemAmounts(i),
     checked: state.get(i.ingredientId)?.checked ?? false,
@@ -83,7 +126,7 @@ export function getShoppingList(householdId: number, planId: number) {
   const manual: ManualItem[] = rows
     .filter((r) => r.manual)
     .map((r) => ({ id: r.id, label: r.freeLabel ?? "", aisle: r.aisle ?? "autre", checked: r.checked }));
-  return { plan, items, manual };
+  return { plan, period, items, manual };
 }
 
 export type ShoppingList = NonNullable<ReturnType<typeof getShoppingList>>;
@@ -92,6 +135,7 @@ export type ShoppingList = NonNullable<ReturnType<typeof getShoppingList>>;
 export function setItemState(
   householdId: number,
   planId: number,
+  period: string,
   ingredientId: number,
   patch: { checked?: boolean; removed?: boolean },
 ): boolean {
@@ -108,7 +152,7 @@ export function setItemState(
     .from(schema.shoppingListItems)
     .where(
       and(
-        eq(schema.shoppingListItems.planId, planId),
+        inList(planId, period),
         eq(schema.shoppingListItems.ingredientId, ingredientId),
         eq(schema.shoppingListItems.manual, false),
       ),
@@ -117,17 +161,17 @@ export function setItemState(
   if (existing) {
     db.update(schema.shoppingListItems).set(patch).where(eq(schema.shoppingListItems.id, existing.id)).run();
   } else {
-    db.insert(schema.shoppingListItems).values({ planId, ingredientId, manual: false, ...patch }).run();
+    db.insert(schema.shoppingListItems).values({ planId, period, ingredientId, manual: false, ...patch }).run();
   }
   return true;
 }
 
-export function addManualItem(householdId: number, planId: number, text: string): boolean {
+export function addManualItem(householdId: number, planId: number, period: string, text: string): boolean {
   const label = text.trim().slice(0, 120);
   if (!label || !ownedPlan(householdId, planId)) return false;
   getDb()
     .insert(schema.shoppingListItems)
-    .values({ planId, manual: true, freeLabel: label, aisle: guessAisle(parseIngredientLine(label).name) })
+    .values({ planId, period, manual: true, freeLabel: label, aisle: guessAisle(parseIngredientLine(label).name) })
     .run();
   return true;
 }
@@ -154,9 +198,9 @@ export function deleteManualItem(householdId: number, planId: number, id: number
 }
 
 /** New shopping trip: everything unchecked. */
-export function uncheckAll(householdId: number, planId: number): boolean {
+export function uncheckAll(householdId: number, planId: number, period: string): boolean {
   if (!ownedPlan(householdId, planId)) return false;
-  getDb().update(schema.shoppingListItems).set({ checked: false }).where(eq(schema.shoppingListItems.planId, planId)).run();
+  getDb().update(schema.shoppingListItems).set({ checked: false }).where(inList(planId, period)).run();
   return true;
 }
 

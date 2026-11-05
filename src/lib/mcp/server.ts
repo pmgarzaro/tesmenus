@@ -19,6 +19,7 @@ import { addDays, today } from "@/lib/planning/dates";
 import { MEASURES } from "@/lib/body/measures";
 import { deleteBodyEntry, saveBodyEntry } from "@/lib/body/repo";
 import { createRecipeFromMcp, createRecipeShape } from "./recipes";
+import { createPlanFromMcp, createPlanShape, setMealShape, setPlannedMeal, shoppingListView } from "./planning";
 import { bodyEntryView, bodyLogView, logEntryView, mealLogView, plannedMeals, recipeView, searchRecipes, targetsView } from "./data";
 
 export const SERVER_INFO = { name: "tesmenus", version: "1.0.0" };
@@ -27,6 +28,7 @@ const INSTRUCTIONS = `Tes menus : planning de repas, recettes et journal aliment
 Dates au format YYYY-MM-DD, fuseau Europe/Paris ; sans date, c'est aujourd'hui (${"<today>"}).
 Pour « qu'est-ce que je mange ce soir » : get_planned_meals, puis get_recipe avec servings=1 (une portion pour une personne).
 Pour tenir le journal : log_meal avec tes estimations est_kcal, est_protein_g, est_carbs_g (glucides) et est_fat_g (lipides). Pour un bilan : get_meal_log + get_nutrition_targets.
+Planning : create_meal_plan crée un planning (tirage automatique de l'app, repas choisis, ou les deux), set_planned_meal change un repas, get_shopping_list donne les courses d'une période.
 Pour ajouter une recette à la bibliothèque du foyer : create_recipe (vérifie d'abord avec search_recipes qu'elle n'existe pas).
 Poids et mensurations : log_body_measurement pour noter, get_body_measurements pour suivre la tendance (moyenne 7 jours, rythme par semaine, évolution du tour de taille).
 N'appelle set_nutrition_targets que si l'utilisateur le demande explicitement.`;
@@ -113,6 +115,55 @@ export function createMcpServer(owner: Owner): McpServer {
       annotations: readOnly,
     },
     ({ query, limit }) => run(() => searchRecipes(owner, query, limit ?? 10)),
+  );
+
+  server.registerTool(
+    "create_meal_plan",
+    {
+      title: "Créer un planning",
+      description:
+        "Crée un planning de repas (midi / soir) pour le foyer. Sans `meals`, l'app tire les recettes elle-même " +
+        "(alternance viande / poisson / végé, pas de répétition, restes du dîner le midi suivant) en respectant les contraintes. " +
+        "Avec `meals`, place les recettes choisies, et complète le reste si fill_rest. " +
+        "Les plannings ne peuvent pas se chevaucher : par défaut il commence le lendemain du planning en cours. " +
+        "Utiliser search_recipes pour trouver les recipe_id. À faire seulement à la demande de l'utilisateur.",
+      inputSchema: createPlanShape,
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    },
+    (a) => run(() => createPlanFromMcp(owner, a)),
+  );
+
+  server.registerTool(
+    "set_planned_meal",
+    {
+      title: "Changer un repas du planning",
+      description:
+        "Modifie un repas (date + lunch/dinner) d'un planning existant : autre recette, repas extérieur, restes d'un repas précédent, " +
+        "vider, ou portions. Une seule action à la fois (servings peut accompagner recipe_id). Renvoie le planning à jour.",
+      inputSchema: setMealShape,
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    },
+    (a) => run(() => setPlannedMeal(owner, a)),
+  );
+
+  server.registerTool(
+    "get_shopping_list",
+    {
+      title: "Liste de courses",
+      description:
+        "Ingrédients à acheter pour les repas cuisinés entre deux dates (tous plannings confondus), additionnés et convertis comme dans l'app, " +
+        "regroupés par rayon. Par défaut : les 7 prochains jours. Ne tient pas compte des cases cochées dans l'app.",
+      inputSchema: {
+        date_from: dateSchema.optional().describe("Début (aujourd'hui par défaut)"),
+        date_to: dateSchema.optional().describe("Fin incluse (date_from + 6 jours par défaut)"),
+      },
+      annotations: readOnly,
+    },
+    ({ date_from, date_to }) =>
+      run(() => {
+        const from = date_from ?? today();
+        return shoppingListView(owner, from, date_to ?? addDays(from, 6));
+      }),
   );
 
   server.registerTool(

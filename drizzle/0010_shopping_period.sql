@@ -1,0 +1,1 @@
+ALTER TABLE `shopping_list_items` ADD `period` text DEFAULT '' NOT NULL;

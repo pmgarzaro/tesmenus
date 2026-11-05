@@ -198,6 +198,9 @@ export const shoppingListItems = sqliteTable(
     manual: integer("manual", { mode: "boolean" }).notNull().default(false),
     freeLabel: text("free_label"),
     aisle: text("aisle", { enum: AISLES }), // manual items
+    // Shopping trip this state belongs to: "" = the whole plan,
+    // "YYYY-MM-DD_YYYY-MM-DD" = only the meals cooked in that period.
+    period: text("period").notNull().default(""),
   },
   (t) => [index("shopping_list_items_plan_idx").on(t.planId)],
 );

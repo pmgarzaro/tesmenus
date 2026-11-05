@@ -182,6 +182,9 @@ describe("MCP tools", () => {
         "log_meal",
         "search_recipes",
         "create_recipe",
+        "create_meal_plan",
+        "set_planned_meal",
+        "get_shopping_list",
         "log_body_measurement",
         "get_body_measurements",
         "delete_body_measurement",
@@ -224,6 +227,63 @@ describe("MCP tools", () => {
     // Leftovers on the next day point back to the dinner.
     const next = await call("get_planned_meals", { date: getPlan(householdId, id)!.entries.at(-1)!.date });
     expect(next.data.meals.find((m: { is_leftover: boolean }) => m.is_leftover)).toMatchObject({ slot: "lunch", leftover_of: { date, slot: "dinner" } });
+  });
+
+  it("creates plans, changes meals and lists shopping for a period", async () => {
+    const { addDays } = await import("@/lib/planning/dates");
+    const { getShoppingList } = await import("@/lib/shopping/repo");
+    const id = (title: string) => getDb().select().from(schema.recipes).all().find((r) => r.householdId === householdId && r.title === title)!.id;
+    // A plan already runs from today (previous test): the next one starts after it.
+    const auto = await call("create_meal_plan", { days: 3, exclude_tags: ["Poisson"] });
+    expect(auto.isError).toBe(false);
+    const start = auto.data.start_date;
+    expect(start > today()).toBe(true);
+    expect(auto.data.meals).toHaveLength(6);
+    const fish = getDb().select().from(schema.recipes).all().filter((r) => r.tags.includes("poisson")).map((r) => r.id);
+    expect(auto.data.meals.some((m: { recipe_id: number }) => fish.includes(m.recipe_id))).toBe(false);
+
+    // Overlap refused with the next free date.
+    expect(await call("create_meal_plan", { start_date: start, days: 2 })).toMatchObject({ isError: true, text: expect.stringMatching(/chevauchent/) });
+
+    // Chosen meals only.
+    const chili = id("Chili con carne");
+    const chosen = await call("create_meal_plan", {
+      start_date: addDays(start, 3),
+      days: 2,
+      meals: [
+        { date: addDays(start, 3), slot: "dinner", recipe_id: chili },
+        { date: addDays(start, 4), slot: "dinner", eating_out: true },
+      ],
+    });
+    expect(chosen.isError).toBe(false);
+    const meal = (d: string, s: string) => chosen.data.meals.find((m: { date: string; slot: string }) => m.date === d && m.slot === s);
+    expect(meal(addDays(start, 3), "dinner")).toMatchObject({ recipe_id: chili, servings_planned: 4 });
+    expect(meal(addDays(start, 4), "lunch")).toMatchObject({ is_leftover: true, recipe_id: chili, leftover_of: { date: addDays(start, 3), slot: "dinner" } });
+    expect(meal(addDays(start, 4), "dinner")).toMatchObject({ is_eating_out: true });
+    expect(meal(addDays(start, 3), "lunch")).toMatchObject({ recipe_id: null, is_eating_out: false });
+
+    // Change a meal.
+    const gratin = id("Gratin dauphinois");
+    const changed = await call("set_planned_meal", { date: addDays(start, 3), slot: "lunch", recipe_id: gratin, servings: 3 });
+    expect(changed.data.meals.find((m: { date: string; slot: string }) => m.date === addDays(start, 3) && m.slot === "lunch")).toMatchObject({
+      recipe_id: gratin,
+      servings_planned: 3,
+    });
+    expect(await call("set_planned_meal", { date: addDays(start, 3), slot: "lunch", clear: true, eating_out: true })).toMatchObject({ isError: true });
+    expect(await call("set_planned_meal", { date: "2030-01-01", slot: "lunch", clear: true })).toMatchObject({
+      isError: true,
+      text: expect.stringMatching(/Aucun planning/),
+    });
+
+    // Shopping list for that day: gratin (3 portions) + chili (4), same as the app's list for the period.
+    const shop = await call("get_shopping_list", { date_from: addDays(start, 3), date_to: addDays(start, 3) });
+    expect(new Set(shop.data.recipes)).toEqual(new Set(["Gratin dauphinois", "Chili con carne"]));
+    const appList = getShoppingList(householdId, chosen.data.plan_id, addDays(start, 3), addDays(start, 3))!;
+    expect(shop.data.items.map((i: { name: string; amount: string }) => [i.name, i.amount]).sort()).toEqual(
+      appList.items.map((i) => [i.name, i.amount || null]).sort(),
+    );
+    // The next day only has leftovers and eating out: nothing to buy.
+    expect((await call("get_shopping_list", { date_from: addDays(start, 4), date_to: addDays(start, 4) })).data.items).toEqual([]);
   });
 
   it("searches recipes of the household", async () => {

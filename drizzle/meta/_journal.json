@@ -71,6 +71,13 @@
       "when": 1793890231745,
       "tag": "0009_body_log",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1793905406383,
+      "tag": "0010_shopping_period",
+      "breakpoints": true
     }
   ]
 }

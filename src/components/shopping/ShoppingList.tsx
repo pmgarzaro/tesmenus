@@ -35,7 +35,13 @@ type Row =
   | { kind: "item"; item: ListItem; checked: boolean }
   | { kind: "manual"; item: ManualItem; checked: boolean };
 
-export function ShoppingList({ planId, title, items, manual }: { planId: number; title: string } & State) {
+export function ShoppingList({
+  planId,
+  period = "",
+  title,
+  items,
+  manual,
+}: { planId: number; period?: string; title: string } & State) {
   const router = useRouter();
   const [state, apply] = useOptimistic<State, ShopAction>({ items, manual }, reduce);
   const [, start] = useTransition();
@@ -46,7 +52,7 @@ export function ShoppingList({ planId, title, items, manual }: { planId: number;
   const act = (a: ShopAction) =>
     start(async () => {
       apply(a);
-      await shopAction(planId, a);
+      await shopAction(planId, period, a);
     });
 
   // Two phones in the shop: refresh when coming back to the app.
@@ -86,7 +92,7 @@ export function ShoppingList({ planId, title, items, manual }: { planId: number;
           const t = draft;
           setDraft("");
           start(async () => {
-            await shopAction(planId, { type: "add", text: t });
+            await shopAction(planId, period, { type: "add", text: t });
             router.refresh();
           });
         }}
