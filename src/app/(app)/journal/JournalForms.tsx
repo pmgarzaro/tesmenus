@@ -14,12 +14,54 @@ const SHORT: Record<LogSlot, string> = {
   dessert: "Dessert",
 };
 
+type Values = {
+  servings?: number | null;
+  estKcal?: number | null;
+  estProteinG?: number | null;
+  estCarbsG?: number | null;
+  estFatG?: number | null;
+};
+
+const small = "w-full rounded-lg border border-stone-300 bg-white px-2 py-2";
+
+/** Portions + kcal + macros, compact enough for a phone. */
+function NumberFields({ values = {} }: { values?: Values }) {
+  const fields: { name: keyof Values; label: string; step: string; max: string }[] = [
+    { name: "servings", label: "Portions", step: "0.25", max: "50" },
+    { name: "estKcal", label: "kcal", step: "1", max: "10000" },
+    { name: "estProteinG", label: "Prot. (g)", step: "0.1", max: "1000" },
+    { name: "estCarbsG", label: "Gluc. (g)", step: "0.1", max: "1000" },
+    { name: "estFatG", label: "Lip. (g)", step: "0.1", max: "1000" },
+  ];
+  return (
+    <div className="grid grid-cols-5 gap-1.5">
+      {fields.map((f) => (
+        <label key={f.name} className="text-xs text-stone-500">
+          {f.label}
+          <input
+            name={f.name}
+            type="number"
+            inputMode="decimal"
+            step={f.step}
+            min="0"
+            max={f.max}
+            defaultValue={values[f.name] ?? ""}
+            className={small}
+          />
+        </label>
+      ))}
+    </div>
+  );
+}
+
 export type PlanSuggestion = {
   slot: LogSlot;
   recipeId: number;
   name: string;
   kcal: number | null;
   protein: number | null;
+  carbs: number | null;
+  fat: number | null;
 };
 
 function SlotPicker({ value, onChange }: { value: LogSlot; onChange: (s: LogSlot) => void }) {
@@ -72,6 +114,8 @@ export function QuickAdd({
     (f.elements.namedItem("servings") as HTMLInputElement).value = "1";
     (f.elements.namedItem("estKcal") as HTMLInputElement).value = s.kcal === null ? "" : String(s.kcal);
     (f.elements.namedItem("estProteinG") as HTMLInputElement).value = s.protein === null ? "" : String(s.protein);
+    (f.elements.namedItem("estCarbsG") as HTMLInputElement).value = s.carbs === null ? "" : String(s.carbs);
+    (f.elements.namedItem("estFatG") as HTMLInputElement).value = s.fat === null ? "" : String(s.fat);
     descRef.current?.focus();
   };
 
@@ -108,20 +152,7 @@ export function QuickAdd({
         placeholder="Ex. 1 egg muffin + café au lait"
         className={input}
       />
-      <div className="grid grid-cols-3 gap-2">
-        <label className="text-xs text-stone-500">
-          Portions
-          <input name="servings" type="number" inputMode="decimal" step="0.25" min="0.25" max="50" className={input} />
-        </label>
-        <label className="text-xs text-stone-500">
-          kcal
-          <input name="estKcal" type="number" inputMode="numeric" min="0" max="10000" className={input} />
-        </label>
-        <label className="text-xs text-stone-500">
-          Protéines (g)
-          <input name="estProteinG" type="number" inputMode="decimal" step="0.1" min="0" max="1000" className={input} />
-        </label>
-      </div>
+      <NumberFields />
       {recipe && (
         <p className="text-xs text-stone-500">
           Recette du planning liée{recipe.kcal !== null ? " ; valeurs estimées par l'appli pour 1 portion, modifiables" : ""}.{" "}
@@ -141,7 +172,7 @@ export function QuickAdd({
 export function EditEntry({
   entry,
 }: {
-  entry: { id: number; slot: LogSlot; description: string; servings: number | null; estKcal: number | null; estProteinG: number | null };
+  entry: Values & { id: number; slot: LogSlot; description: string };
 }) {
   const [state, action, pending] = useActionState(editEntry, null);
   const [slot, setSlot] = useState<LogSlot>(entry.slot);
@@ -157,20 +188,7 @@ export function EditEntry({
         <input type="hidden" name="slot" value={slot} />
         <SlotPicker value={slot} onChange={setSlot} />
         <input name="description" required maxLength={500} defaultValue={entry.description} className={input} />
-        <div className="grid grid-cols-3 gap-2">
-          <label className="text-xs text-stone-500">
-            Portions
-            <input name="servings" type="number" step="0.25" min="0.25" max="50" defaultValue={entry.servings ?? ""} className={input} />
-          </label>
-          <label className="text-xs text-stone-500">
-            kcal
-            <input name="estKcal" type="number" min="0" max="10000" defaultValue={entry.estKcal ?? ""} className={input} />
-          </label>
-          <label className="text-xs text-stone-500">
-            Protéines (g)
-            <input name="estProteinG" type="number" step="0.1" min="0" max="1000" defaultValue={entry.estProteinG ?? ""} className={input} />
-          </label>
-        </div>
+        <NumberFields values={entry} />
         {state && "error" in state && <p className="text-red-600">{state.error}</p>}
         <button disabled={pending} className="rounded-xl border border-stone-300 px-4 py-1.5 disabled:opacity-60">
           Enregistrer
@@ -180,7 +198,19 @@ export function EditEntry({
   );
 }
 
-export function TargetsForm({ kcal, protein, notes }: { kcal: number; protein: number; notes: string | null }) {
+export function TargetsForm({
+  kcal,
+  protein,
+  carbs,
+  fat,
+  notes,
+}: {
+  kcal: number;
+  protein: number;
+  carbs: number | null;
+  fat: number | null;
+  notes: string | null;
+}) {
   const [state, action, pending] = useActionState(saveTargets, null);
   return (
     <form action={action} className="mt-3 space-y-2">
@@ -192,6 +222,14 @@ export function TargetsForm({ kcal, protein, notes }: { kcal: number; protein: n
         <label className="text-xs text-stone-500">
           Protéines (g / jour)
           <input name="proteinG" type="number" required min="0" max="1000" defaultValue={protein} className={input} />
+        </label>
+        <label className="text-xs text-stone-500">
+          Glucides (g / jour, facultatif)
+          <input name="carbsG" type="number" min="0" max="2000" defaultValue={carbs ?? ""} className={input} />
+        </label>
+        <label className="text-xs text-stone-500">
+          Lipides (g / jour, facultatif)
+          <input name="fatG" type="number" min="0" max="1000" defaultValue={fat ?? ""} className={input} />
         </label>
       </div>
       <input name="notes" maxLength={1000} defaultValue={notes ?? ""} placeholder="Notes (ex. calculé sur 85 kg, sédentaire)" className={input} />

@@ -74,25 +74,51 @@ export type DayTotals = {
   date: string;
   estKcal: number;
   estProteinG: number;
+  estCarbsG: number;
+  estFatG: number;
   entries: number;
   /** Entries with no kcal or no protein estimate (not counted in that total). */
   entriesWithoutEstimate: number;
+  /** Entries with no carbs or no fat estimate. */
+  entriesWithoutMacros: number;
 };
 
+type Estimates = Pick<LogEntry, "date" | "estKcal" | "estProteinG" | "estCarbsG" | "estFatG">;
+
+const round1 = (x: number) => Math.round(x * 10) / 10;
+
 /** Totals per date, in order. Days without any entry are left out. */
-export function totalsByDate(entries: Pick<LogEntry, "date" | "estKcal" | "estProteinG">[]): DayTotals[] {
+export function totalsByDate(entries: Estimates[]): DayTotals[] {
   const byDate = new Map<string, DayTotals>();
   for (const e of entries) {
-    const t = byDate.get(e.date) ?? { date: e.date, estKcal: 0, estProteinG: 0, entries: 0, entriesWithoutEstimate: 0 };
+    const t = byDate.get(e.date) ?? {
+      date: e.date,
+      estKcal: 0,
+      estProteinG: 0,
+      estCarbsG: 0,
+      estFatG: 0,
+      entries: 0,
+      entriesWithoutEstimate: 0,
+      entriesWithoutMacros: 0,
+    };
     t.entries++;
     t.estKcal += e.estKcal ?? 0;
     t.estProteinG += e.estProteinG ?? 0;
+    t.estCarbsG += e.estCarbsG ?? 0;
+    t.estFatG += e.estFatG ?? 0;
     if (e.estKcal === null || e.estProteinG === null) t.entriesWithoutEstimate++;
+    if (e.estCarbsG === null || e.estFatG === null) t.entriesWithoutMacros++;
     byDate.set(e.date, t);
   }
   return [...byDate.values()]
     .sort((a, b) => a.date.localeCompare(b.date))
-    .map((t) => ({ ...t, estKcal: Math.round(t.estKcal), estProteinG: Math.round(t.estProteinG * 10) / 10 }));
+    .map((t) => ({
+      ...t,
+      estKcal: Math.round(t.estKcal),
+      estProteinG: round1(t.estProteinG),
+      estCarbsG: round1(t.estCarbsG),
+      estFatG: round1(t.estFatG),
+    }));
 }
 
 export function listLog(owner: Owner, dateFrom: string, dateTo = dateFrom) {
@@ -112,7 +138,14 @@ export function listLog(owner: Owner, dateFrom: string, dateTo = dateFrom) {
   return { entries, totals: totalsByDate(entries) };
 }
 
-export type Targets = { kcalPerDay: number; proteinG: number; notes: string | null; isDefault: boolean };
+export type Targets = {
+  kcalPerDay: number;
+  proteinG: number;
+  carbsG: number | null;
+  fatG: number | null;
+  notes: string | null;
+  isDefault: boolean;
+};
 
 export function getTargets(owner: Owner): Targets {
   const row = getDb()
@@ -121,7 +154,14 @@ export function getTargets(owner: Owner): Targets {
     .where(eq(schema.nutritionTargets.userId, owner.userId))
     .get();
   if (!row) return { ...DEFAULT_TARGETS, isDefault: true };
-  return { kcalPerDay: row.kcalPerDay, proteinG: row.proteinG, notes: row.notes, isDefault: false };
+  return {
+    kcalPerDay: row.kcalPerDay,
+    proteinG: row.proteinG,
+    carbsG: row.carbsG,
+    fatG: row.fatG,
+    notes: row.notes,
+    isDefault: false,
+  };
 }
 
 export function setTargets(owner: Owner, input: TargetsInput): Targets {

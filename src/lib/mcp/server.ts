@@ -23,7 +23,7 @@ export const SERVER_INFO = { name: "tesmenus", version: "1.0.0" };
 const INSTRUCTIONS = `Tes menus : planning de repas, recettes et journal alimentaire de l'utilisateur.
 Dates au format YYYY-MM-DD, fuseau Europe/Paris ; sans date, c'est aujourd'hui (${"<today>"}).
 Pour « qu'est-ce que je mange ce soir » : get_planned_meals, puis get_recipe avec servings=1 (une portion pour une personne).
-Pour tenir le journal : log_meal avec tes estimations est_kcal / est_protein_g. Pour un bilan : get_meal_log + get_nutrition_targets.
+Pour tenir le journal : log_meal avec tes estimations est_kcal, est_protein_g, est_carbs_g (glucides) et est_fat_g (lipides). Pour un bilan : get_meal_log + get_nutrition_targets.
 N'appelle set_nutrition_targets que si l'utilisateur le demande explicitement.`;
 
 const optionalDate = dateSchema.optional().describe("Date YYYY-MM-DD (Europe/Paris). Par défaut : aujourd'hui.");
@@ -111,7 +111,7 @@ export function createMcpServer(owner: Owner): McpServer {
   );
 
   const kcal = z.number().min(0).max(10_000);
-  const protein = z.number().min(0).max(1_000);
+  const grams = z.number().min(0).max(1_000);
 
   server.registerTool(
     "log_meal",
@@ -119,7 +119,7 @@ export function createMcpServer(owner: Owner): McpServer {
       title: "Noter un repas",
       description:
         "Ajoute une entrée au journal alimentaire de l'utilisateur (ce qu'il a réellement mangé, recette de l'app ou non). " +
-        "Renseigner est_kcal et est_protein_g avec ton estimation. Si c'est une recette de l'app, donner recipe_id et servings (portions mangées).",
+        "Renseigner est_kcal, est_protein_g, est_carbs_g et est_fat_g avec ton estimation. Si c'est une recette de l'app, donner recipe_id et servings (portions mangées).",
       inputSchema: {
         date: optionalDate,
         slot: slotSchema.describe(`Créneau : ${LOG_SLOTS.join(" | ")}`),
@@ -127,7 +127,9 @@ export function createMcpServer(owner: Owner): McpServer {
         recipe_id: z.number().int().positive().nullable().optional().describe("Recette de l'app, si c'en est une"),
         servings: z.number().gt(0).max(50).nullable().optional().describe("Portions mangées (avec recipe_id)"),
         est_kcal: kcal.nullable().optional().describe("Estimation des calories (kcal)"),
-        est_protein_g: protein.nullable().optional().describe("Estimation des protéines (g)"),
+        est_protein_g: grams.nullable().optional().describe("Estimation des protéines (g)"),
+        est_carbs_g: grams.nullable().optional().describe("Estimation des glucides (g)"),
+        est_fat_g: grams.nullable().optional().describe("Estimation des lipides (g)"),
         notes: z.string().max(1000).nullable().optional(),
       },
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
@@ -143,6 +145,8 @@ export function createMcpServer(owner: Owner): McpServer {
             servings: a.servings ?? null,
             estKcal: a.est_kcal ?? null,
             estProteinG: a.est_protein_g ?? null,
+            estCarbsG: a.est_carbs_g ?? null,
+            estFatG: a.est_fat_g ?? null,
             notes: a.notes ?? null,
           }),
         ),
@@ -162,7 +166,9 @@ export function createMcpServer(owner: Owner): McpServer {
         recipe_id: z.number().int().positive().nullable().optional(),
         servings: z.number().gt(0).max(50).nullable().optional(),
         est_kcal: kcal.nullable().optional(),
-        est_protein_g: protein.nullable().optional(),
+        est_protein_g: grams.nullable().optional(),
+        est_carbs_g: grams.nullable().optional(),
+        est_fat_g: grams.nullable().optional(),
         notes: z.string().max(1000).nullable().optional(),
       },
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
@@ -178,6 +184,8 @@ export function createMcpServer(owner: Owner): McpServer {
             servings: a.servings,
             estKcal: a.est_kcal,
             estProteinG: a.est_protein_g,
+            estCarbsG: a.est_carbs_g,
+            estFatG: a.est_fat_g,
             notes: a.notes,
           }),
         ),
@@ -205,7 +213,7 @@ export function createMcpServer(owner: Owner): McpServer {
       title: "Journal alimentaire",
       description:
         "Journal d'une date ou d'une période (92 jours max), avec les totaux estimés par jour. " +
-        "entries_without_estimate = entrées sans kcal ou protéines (non comptées dans le total : à estimer puis compléter via update_meal_log). " +
+        "entries_without_estimate = entrées sans kcal ou protéines, entries_without_macros = sans glucides ou lipides (non comptées dans ces totaux : à estimer puis compléter via update_meal_log). " +
         "Sans date : aujourd'hui.",
       inputSchema: {
         date_from: optionalDate,
@@ -220,7 +228,7 @@ export function createMcpServer(owner: Owner): McpServer {
     "get_nutrition_targets",
     {
       title: "Objectifs nutritionnels",
-      description: "Objectifs quotidiens de l'utilisateur (kcal et protéines). is_default = l'utilisateur ne les a pas encore personnalisés.",
+      description: "Objectifs quotidiens de l'utilisateur : kcal, protéines, et glucides / lipides s'il les a fixés (null sinon). is_default = l'utilisateur ne les a pas encore personnalisés.",
       inputSchema: {},
       annotations: readOnly,
     },
@@ -231,16 +239,31 @@ export function createMcpServer(owner: Owner): McpServer {
     "set_nutrition_targets",
     {
       title: "Modifier les objectifs",
-      description: "Modifie les objectifs quotidiens. À appeler UNIQUEMENT si l'utilisateur le demande explicitement.",
+      description:
+        "Modifie les objectifs quotidiens. À appeler UNIQUEMENT si l'utilisateur le demande explicitement. " +
+        "carbs_g / fat_g omis = inchangés, null = pas d'objectif.",
       inputSchema: {
         kcal_per_day: z.number().min(800).max(10_000),
         protein_g: z.number().min(0).max(1_000),
+        carbs_g: z.number().min(0).max(2_000).nullable().optional().describe("Glucides (g / jour)"),
+        fat_g: z.number().min(0).max(1_000).nullable().optional().describe("Lipides (g / jour)"),
         notes: z.string().max(1000).nullable().optional().describe("Ex. « calculé sur 85 kg, sédentaire »"),
       },
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
     (a) =>
-      run(() => targetsView(setTargets(owner, { kcalPerDay: a.kcal_per_day, proteinG: a.protein_g, notes: a.notes ?? null }))),
+      run(() => {
+        const current = getTargets(owner);
+        return targetsView(
+          setTargets(owner, {
+            kcalPerDay: a.kcal_per_day,
+            proteinG: a.protein_g,
+            carbsG: a.carbs_g === undefined ? current.carbsG : a.carbs_g,
+            fatG: a.fat_g === undefined ? current.fatG : a.fat_g,
+            notes: a.notes === undefined ? (current.isDefault ? null : current.notes) : a.notes,
+          }),
+        );
+      }),
   );
 
   return server;

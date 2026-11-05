@@ -199,6 +199,12 @@ describe("MCP tools", () => {
 
     const recipe = await call("get_recipe", { recipe_id: meal.recipe_id, servings: 1 });
     const stored = getRecipe(householdId, meal.recipe_id)!;
+    expect(recipe.data.app_nutrition_per_serving).toMatchObject({
+      kcal: expect.any(Number),
+      protein_g: expect.any(Number),
+      carbs_g: expect.any(Number),
+      fat_g: expect.any(Number),
+    });
     expect(recipe.data).toMatchObject({ id: stored.id, name: stored.title, base_servings: stored.servings, servings: 1, steps: null });
     expect(recipe.data.ingredients.map((i: { amount: number | null }) => i.amount)).toEqual(
       stored.ingredients.map((i) => {
@@ -241,11 +247,34 @@ describe("MCP tools", () => {
 
     const log = await call("get_meal_log", { date_from: date });
     expect(log.data.totals_by_date).toEqual([
-      { date, est_kcal: 1200, est_protein_g: 35, entries: 2, entries_without_estimate: 1 },
+      {
+        date,
+        est_kcal: 1200,
+        est_protein_g: 35,
+        est_carbs_g: 0,
+        est_fat_g: 0,
+        entries: 2,
+        entries_without_estimate: 1,
+        entries_without_macros: 2,
+      },
     ]);
+    const pasta = await call("log_meal", { date, slot: "lunch", description: "Pâtes", est_kcal: 600, est_protein_g: 20, est_carbs_g: 90, est_fat_g: 15 });
+    expect(pasta.data).toMatchObject({ est_carbs_g: 90, est_fat_g: 15 });
+    expect((await call("update_meal_log", { id: pasta.data.id, est_fat_g: 18 })).data).toMatchObject({ est_carbs_g: 90, est_fat_g: 18 });
+    expect((await call("get_meal_log", { date_from: date })).data.totals_by_date[0]).toMatchObject({ est_carbs_g: 90, est_fat_g: 18 });
+    await call("delete_meal_log", { id: pasta.data.id });
     expect(await call("get_nutrition_targets")).toMatchObject({ data: { kcal_per_day: 2170, protein_g: 140, is_default: true } });
-    await call("set_nutrition_targets", { kcal_per_day: 2100, protein_g: 140, notes: "85 kg" });
-    expect((await call("get_nutrition_targets")).data).toMatchObject({ kcal_per_day: 2100, is_default: false });
+    expect((await call("get_nutrition_targets")).data).toMatchObject({ carbs_g: null, fat_g: null });
+    await call("set_nutrition_targets", { kcal_per_day: 2100, protein_g: 140, carbs_g: 230, fat_g: 70, notes: "85 kg" });
+    // Omitted carbs / fat / notes are kept.
+    await call("set_nutrition_targets", { kcal_per_day: 2050, protein_g: 140 });
+    expect((await call("get_nutrition_targets")).data).toMatchObject({
+      kcal_per_day: 2050,
+      carbs_g: 230,
+      fat_g: 70,
+      notes: "85 kg",
+      is_default: false,
+    });
 
     expect(await call("delete_meal_log", { id: breakfast.data.id })).toMatchObject({ data: { deleted: true } });
     expect(await call("delete_meal_log", { id: breakfast.data.id })).toMatchObject({ isError: true });

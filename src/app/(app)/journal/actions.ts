@@ -38,6 +38,8 @@ export async function addEntry(_prev: FormState, form: FormData): Promise<FormSt
       servings: num(form.get("servings")),
       estKcal: num(form.get("estKcal")),
       estProteinG: num(form.get("estProteinG")),
+      estCarbsG: num(form.get("estCarbsG")),
+      estFatG: num(form.get("estFatG")),
       notes: str(form.get("notes")),
     });
   } catch (err) {
@@ -55,6 +57,8 @@ export async function editEntry(_prev: FormState, form: FormData): Promise<FormS
       servings: form.has("servings") ? num(form.get("servings")) : undefined,
       estKcal: num(form.get("estKcal")),
       estProteinG: num(form.get("estProteinG")),
+      estCarbsG: num(form.get("estCarbsG")),
+      estFatG: num(form.get("estFatG")),
     });
   } catch (err) {
     return { error: message(err) };
@@ -73,6 +77,8 @@ export async function saveTargets(_prev: FormState, form: FormData): Promise<For
     setTargets(await owner(), {
       kcalPerDay: num(form.get("kcalPerDay")) ?? NaN,
       proteinG: num(form.get("proteinG")) ?? NaN,
+      carbsG: num(form.get("carbsG")),
+      fatG: num(form.get("fatG")),
       notes: str(form.get("notes")),
     });
   } catch (err) {

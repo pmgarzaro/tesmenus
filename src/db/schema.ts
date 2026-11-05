@@ -261,6 +261,8 @@ export const mealLog = sqliteTable(
     description: text("description").notNull(),
     estKcal: real("est_kcal"),
     estProteinG: real("est_protein_g"),
+    estCarbsG: real("est_carbs_g"),
+    estFatG: real("est_fat_g"),
     notes: text("notes"),
     createdAt: createdAt(),
   },
@@ -273,6 +275,9 @@ export const nutritionTargets = sqliteTable("nutrition_targets", {
     .references(() => users.id, { onDelete: "cascade" }),
   kcalPerDay: real("kcal_per_day").notNull(),
   proteinG: real("protein_g").notNull(),
+  // Optional: not everyone tracks carbs and fat.
+  carbsG: real("carbs_g"),
+  fatG: real("fat_g"),
   notes: text("notes"),
   updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
 });

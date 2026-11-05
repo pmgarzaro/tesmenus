@@ -42,7 +42,16 @@ describe("food journal", () => {
     const day = j.listLog(me, "2026-11-05");
     expect(day.entries.map((e) => e.slot)).toEqual(["breakfast", "snack", "dinner"]);
     expect(day.totals).toEqual([
-      { date: "2026-11-05", estKcal: 1130, estProteinG: 80, entries: 3, entriesWithoutEstimate: 1 },
+      {
+        date: "2026-11-05",
+        estKcal: 1130,
+        estProteinG: 80,
+        estCarbsG: 0,
+        estFatG: 0,
+        entries: 3,
+        entriesWithoutEstimate: 1,
+        entriesWithoutMacros: 3,
+      },
     ]);
     expect(j.listLog(me, "2026-11-05", "2026-11-06").totals.map((t) => t.date)).toEqual(["2026-11-05", "2026-11-06"]);
 
@@ -78,23 +87,34 @@ describe("food journal", () => {
   });
 
   it("totals ignore missing estimates per field", () => {
+    const none = { estCarbsG: null, estFatG: null };
     expect(
       j.totalsByDate([
-        { date: "2026-11-02", estKcal: 100.4, estProteinG: null },
-        { date: "2026-11-01", estKcal: null, estProteinG: 10.04 },
-        { date: "2026-11-02", estKcal: 200, estProteinG: 5 },
+        { date: "2026-11-02", estKcal: 100.4, estProteinG: null, estCarbsG: 12.34, estFatG: 3 },
+        { date: "2026-11-01", estKcal: null, estProteinG: 10.04, ...none },
+        { date: "2026-11-02", estKcal: 200, estProteinG: 5, estCarbsG: 20, estFatG: null },
       ]),
     ).toEqual([
-      { date: "2026-11-01", estKcal: 0, estProteinG: 10, entries: 1, entriesWithoutEstimate: 1 },
-      { date: "2026-11-02", estKcal: 300, estProteinG: 5, entries: 2, entriesWithoutEstimate: 1 },
+      { date: "2026-11-01", estKcal: 0, estProteinG: 10, estCarbsG: 0, estFatG: 0, entries: 1, entriesWithoutEstimate: 1, entriesWithoutMacros: 1 },
+      { date: "2026-11-02", estKcal: 300, estProteinG: 5, estCarbsG: 32.3, estFatG: 3, entries: 2, entriesWithoutEstimate: 1, entriesWithoutMacros: 1 },
     ]);
+  });
+
+  it("stores carbs and fat", () => {
+    const e = j.addLogEntry(me, { date: "2026-11-08", slot: "lunch", description: "Pâtes", estKcal: 600, estProteinG: 20, estCarbsG: 90, estFatG: 15 });
+    expect(e).toMatchObject({ estCarbsG: 90, estFatG: 15 });
+    expect(j.updateLogEntry(me, e.id, { estFatG: 18 })).toMatchObject({ estCarbsG: 90, estFatG: 18 });
+    expect(j.listLog(me, "2026-11-08").totals[0]).toMatchObject({ estCarbsG: 90, estFatG: 18, entriesWithoutMacros: 0 });
+    expect(() => j.updateLogEntry(me, e.id, { estCarbsG: -1 })).toThrow();
   });
 
   it("nutrition targets: defaults, then per user", () => {
     expect(j.getTargets(me)).toMatchObject({ kcalPerDay: 2170, proteinG: 140, isDefault: true });
     j.setTargets(me, { kcalPerDay: 2100, proteinG: 140, notes: "85 kg" });
     j.setTargets(me, { kcalPerDay: 2050, proteinG: 150, notes: null });
-    expect(j.getTargets(me)).toEqual({ kcalPerDay: 2050, proteinG: 150, notes: null, isDefault: false });
+    expect(j.getTargets(me)).toEqual({ kcalPerDay: 2050, proteinG: 150, carbsG: null, fatG: null, notes: null, isDefault: false });
+    j.setTargets(me, { kcalPerDay: 2050, proteinG: 150, carbsG: 220, fatG: 70 });
+    expect(j.getTargets(me)).toMatchObject({ carbsG: 220, fatG: 70 });
     expect(j.getTargets(stranger).isDefault).toBe(true);
     expect(() => j.setTargets(me, { kcalPerDay: 100, proteinG: 140, notes: null })).toThrow();
   });
