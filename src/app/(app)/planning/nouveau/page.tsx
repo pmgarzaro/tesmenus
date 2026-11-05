@@ -5,7 +5,7 @@ import { NewPlanForm } from "@/components/planning/NewPlanForm";
 import { TemplateList } from "@/components/planning/TemplateList";
 import { aiEnabledFor } from "@/lib/ai/enabled";
 import { requireUser } from "@/lib/auth";
-import { defaultStartDate } from "@/lib/planning/dates";
+import { nextFreeStartDate } from "@/lib/planning/repo";
 import { listTemplates } from "@/lib/planning/templates";
 import { listRecipeSummaries } from "@/lib/recipes/repo";
 import { tagCounts, totalMinutes } from "@/lib/recipes/search";
@@ -30,14 +30,14 @@ export default async function NewPlanPage() {
         </p>
       ) : (
         <NewPlanForm
-          defaults={{ startDate: defaultStartDate(), days: settings.defaultDays, slots: settings.activeSlots }}
+          defaults={{ startDate: nextFreeStartDate(householdId), days: settings.defaultDays, slots: settings.activeSlots }}
           recipes={recipes}
           tags={tagCounts(summaries).map((t) => t.tag)}
           aiAvailable={aiEnabledFor(householdId)}
         />
       )}
       <div className="mt-6">
-        <TemplateList templates={listTemplates(householdId)} defaultStart={defaultStartDate()} />
+        <TemplateList templates={listTemplates(householdId)} defaultStart={nextFreeStartDate(householdId)} />
       </div>
     </>
   );

@@ -170,3 +170,24 @@ describe("settings sync", () => {
     expect(plans.getPlan(c, id)!.entries.some((e) => e.isLeftover)).toBe(false);
   });
 });
+
+describe("several weeks", () => {
+  it("suggests the day after the running plan, refuses overlaps, links weeks", async () => {
+    const { addDays, today } = await import("./dates");
+    const d = getDb().insert(schema.households).values({ name: "D" }).returning().get().id;
+    seedIfEmpty(d);
+    const t = today();
+    const current = plans.createPlan(d, { ...input, startDate: addDays(t, -3), days: 7 }).id;
+    expect(plans.nextFreeStartDate(d)).toBe(addDays(t, 4));
+    expect(plans.overlapMessage(d, t, 5)).toMatch(/chevauchent/);
+    expect(plans.overlapMessage(d, addDays(t, 3), 2)).toMatch(/chevauchent/); // last day of the current plan
+    expect(plans.overlapMessage(d, addDays(t, 4), 7)).toBeNull();
+
+    const next = plans.createPlan(d, { ...input, startDate: addDays(t, 4), days: 7 }).id;
+    expect(plans.nextFreeStartDate(d)).toBe(addDays(t, 11));
+    // The running week stays the one shown by default.
+    expect(plans.currentPlanId(d)).toBe(current);
+    expect(plans.adjacentPlans(d, current)).toMatchObject({ previous: null, next: { id: next } });
+    expect(plans.adjacentPlans(d, next)).toMatchObject({ previous: { id: current }, next: null });
+  });
+});

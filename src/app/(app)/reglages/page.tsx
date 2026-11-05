@@ -64,13 +64,13 @@ export default async function SettingsPage() {
       <section className="mt-6 space-y-3 paper p-4">
         <h2 className="font-semibold">Claude (connecteur MCP)</h2>
         <p className="text-sm text-stone-600">
-          Claude peut lire le planning et les recettes, et tenir ton journal alimentaire. Dans claude.ai : Paramètres →
+          Claude peut lire le planning et les recettes, ajouter des recettes, et tenir ton journal alimentaire et ton suivi de poids. Dans claude.ai : Paramètres →
           Connecteurs → Ajouter un connecteur personnalisé, avec l&apos;adresse :
         </p>
         <code className="block break-all rounded bg-stone-100 px-2 py-1.5 text-sm">{origin}/mcp</code>
         <p className="text-sm text-stone-500">
-          Claude te demandera de te connecter ici puis d&apos;autoriser l&apos;accès. Il ne peut pas modifier les recettes ni le
-          planning.
+          Claude te demandera de te connecter ici puis d&apos;autoriser l&apos;accès. Il ne peut ni modifier ni supprimer les recettes
+          existantes, ni toucher au planning.
         </p>
         {connections.length > 0 && (
           <ul className="space-y-1.5 text-sm">

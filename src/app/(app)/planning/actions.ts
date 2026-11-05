@@ -34,6 +34,8 @@ export async function createPlanAction(payload: NewPlanPayload): Promise<string>
   const parsed = newPlanSchema.safeParse(payload);
   if (!parsed.success) return parsed.error.issues[0].message;
   const p = parsed.data;
+  const overlap = plans.overlapMessage(householdId, p.startDate, p.days);
+  if (overlap) return overlap;
   const dateList = dateRange(p.startDate, p.days);
   const dates = new Set(dateList);
   const constraints = {
@@ -163,6 +165,10 @@ export async function saveTemplateAction(planId: number, name: string): Promise<
 export async function applyTemplateAction(templateId: number, startDate: string): Promise<string> {
   const { householdId } = await requireUser();
   if (!isValidDate(startDate)) return "Date invalide";
+  const days = templates.listTemplates(householdId).find((t) => t.id === templateId)?.days;
+  if (!days) return "Modèle introuvable";
+  const overlap = plans.overlapMessage(householdId, startDate, days);
+  if (overlap) return overlap;
   const created = templates.createPlanFromTemplate(householdId, templateId, startDate);
   if (!created) return "Modèle introuvable";
   revalidatePath("/planning");

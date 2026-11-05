@@ -18,6 +18,7 @@ import {
 import { addDays, today } from "@/lib/planning/dates";
 import { MEASURES } from "@/lib/body/measures";
 import { deleteBodyEntry, saveBodyEntry } from "@/lib/body/repo";
+import { createRecipeFromMcp, createRecipeShape } from "./recipes";
 import { bodyEntryView, bodyLogView, logEntryView, mealLogView, plannedMeals, recipeView, searchRecipes, targetsView } from "./data";
 
 export const SERVER_INFO = { name: "tesmenus", version: "1.0.0" };
@@ -26,6 +27,7 @@ const INSTRUCTIONS = `Tes menus : planning de repas, recettes et journal aliment
 Dates au format YYYY-MM-DD, fuseau Europe/Paris ; sans date, c'est aujourd'hui (${"<today>"}).
 Pour « qu'est-ce que je mange ce soir » : get_planned_meals, puis get_recipe avec servings=1 (une portion pour une personne).
 Pour tenir le journal : log_meal avec tes estimations est_kcal, est_protein_g, est_carbs_g (glucides) et est_fat_g (lipides). Pour un bilan : get_meal_log + get_nutrition_targets.
+Pour ajouter une recette à la bibliothèque du foyer : create_recipe (vérifie d'abord avec search_recipes qu'elle n'existe pas).
 Poids et mensurations : log_body_measurement pour noter, get_body_measurements pour suivre la tendance (moyenne 7 jours, rythme par semaine, évolution du tour de taille).
 N'appelle set_nutrition_targets que si l'utilisateur le demande explicitement.`;
 
@@ -111,6 +113,25 @@ export function createMcpServer(owner: Owner): McpServer {
       annotations: readOnly,
     },
     ({ query, limit }) => run(() => searchRecipes(owner, query, limit ?? 10)),
+  );
+
+  server.registerTool(
+    "create_recipe",
+    {
+      title: "Créer une recette",
+      description:
+        "Ajoute une recette à la bibliothèque du foyer (visible et modifiable dans l'app, utilisable par le planning et la liste de courses). " +
+        "Quantités pour `servings` portions, une ligne par ingrédient avec { amount, unit, name }. " +
+        "Les tags (viande, poisson, végé…) servent à l'alternance du planning. " +
+        "Ne crée que si l'utilisateur le demande ; ne modifie ni ne supprime les recettes existantes. Renvoie la recette créée.",
+      inputSchema: createRecipeShape,
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    },
+    (a) =>
+      run(() => {
+        const id = createRecipeFromMcp(owner, a);
+        return recipeView(owner, id, undefined, true)!;
+      }),
   );
 
   const kcal = z.number().min(0).max(10_000);

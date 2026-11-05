@@ -39,11 +39,11 @@ export default async function AuthorizePage({
         <strong>{name}</strong> ({host}) demande l&apos;accès à ton compte <strong>{user.email}</strong> :
       </p>
       <ul className="list-disc space-y-1 pl-5 text-sm text-stone-700">
-        <li>lire le planning et les recettes du foyer ;</li>
-        <li>lire et écrire ton journal alimentaire et tes objectifs nutritionnels.</li>
+        <li>lire le planning et les recettes du foyer, et ajouter des recettes ;</li>
+        <li>lire et écrire ton journal alimentaire, tes objectifs, ton poids et tes mensurations.</li>
       </ul>
       <p className="text-sm text-stone-500">
-        Il ne pourra pas modifier les recettes ni le planning. Tu peux retirer cet accès à tout moment dans Réglages.
+        Il ne pourra ni modifier ni supprimer les recettes existantes, ni toucher au planning. Tu peux retirer cet accès à tout moment dans Réglages.
       </p>
       {Object.entries(params).map(([k, v]) =>
         v !== undefined && k !== "decision" ? <input key={k} type="hidden" name={k} value={v} /> : null,

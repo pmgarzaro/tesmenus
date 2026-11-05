@@ -181,6 +181,7 @@ describe("MCP tools", () => {
         "get_recipe",
         "log_meal",
         "search_recipes",
+        "create_recipe",
         "log_body_measurement",
         "get_body_measurements",
         "delete_body_measurement",
@@ -232,6 +233,64 @@ describe("MCP tools", () => {
       recipe_id: getDb().select().from(schema.recipes).all().find((r) => r.householdId !== householdId)!.id,
     });
     expect(other).toMatchObject({ isError: true, text: expect.stringMatching(/introuvable/) });
+  });
+
+  it("creates recipes in the household", async () => {
+    const created = await call("create_recipe", {
+      name: "Bowl poulet patate douce",
+      servings: 2,
+      tags: ["Viande", "rapide"],
+      prep_min: 15,
+      cook_min: 25,
+      fridge_days: 3,
+      ingredients: [
+        { amount: 300, unit: "g", name: "blanc de poulet" },
+        { amount: 1, unit: null, name: "patate douce" },
+        { amount: 2, unit: "c. à soupe", name: "huile d'olive" },
+        { amount: 1, unit: "cuillère à café", name: "paprika" },
+        { name: "sel, poivre" },
+      ],
+      steps: [
+        "Préchauffer le four à 200 °C et cuire la patate douce en dés 25 min.",
+        { text: "Saisir le poulet à la poêle.", duration_min: 8 },
+      ],
+    });
+    expect(created.isError).toBe(false);
+    expect(created.data).toMatchObject({
+      name: "Bowl poulet patate douce",
+      base_servings: 2,
+      tags: ["viande", "rapide"],
+      ingredients: [
+        { amount: 300, unit: "g", name: "blanc de poulet" },
+        { amount: 1, unit: null, name: "patate douce" },
+        { amount: 2, unit: "c. à soupe", name: "huile d'olive" },
+        { amount: 1, unit: "c. à café", name: "paprika" },
+        { amount: null, unit: null, name: "sel, poivre" },
+      ],
+      steps: [expect.stringContaining("four"), "Saisir le poulet à la poêle."],
+    });
+    const stored = getRecipe(householdId, created.data.id)!;
+    expect(stored).toMatchObject({ householdId, sourceType: "manuel", fridgeDays: 3, mealType: "plat" });
+    expect(stored.steps[0]).toMatchObject({ equipment: "four", temperature: 200, durationMinutes: 25 });
+    expect(stored.steps[1]).toMatchObject({ durationMinutes: 8 });
+    expect((await call("search_recipes", { query: "patate douce" })).data.results).toEqual([
+      expect.objectContaining({ id: created.data.id }),
+    ]);
+    // Halved like any recipe.
+    expect((await call("get_recipe", { recipe_id: created.data.id, servings: 1 })).data.ingredients[0]).toMatchObject({ amount: 150 });
+
+    expect(await call("create_recipe", { name: "bowl poulet PATATE douce", servings: 2, ingredients: [{ amount: 1, name: "x" }] })).toMatchObject({
+      isError: true,
+      text: expect.stringMatching(/existe déjà/),
+    });
+    expect(
+      (await call("create_recipe", { name: "Bowl poulet patate douce", servings: 2, ingredients: [{ amount: 1, name: "x" }], allow_duplicate: true })).isError,
+    ).toBe(false);
+    expect(await call("create_recipe", { name: "X", servings: 2, ingredients: [{ amount: 1, unit: "poignée", name: "x" }] })).toMatchObject({
+      isError: true,
+      text: expect.stringMatching(/Unité inconnue/),
+    });
+    expect((await call("create_recipe", { name: "Y", servings: 2, ingredients: [] })).isError).toBe(true);
   });
 
   it("keeps the food journal and reports the day against targets", async () => {
