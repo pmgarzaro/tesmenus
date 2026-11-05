@@ -52,6 +52,7 @@ export async function GET() {
     settings: db.select().from(schema.settings).where(eq(schema.settings.householdId, h)).all(),
     // Personal data of the signed-in user only.
     mealLog: db.select().from(schema.mealLog).where(eq(schema.mealLog.userId, user.id)).all(),
+    bodyLog: db.select().from(schema.bodyLog).where(eq(schema.bodyLog.userId, user.id)).all(),
     nutritionTargets: db.select().from(schema.nutritionTargets).where(eq(schema.nutritionTargets.userId, user.id)).all(),
   };
   const date = dump.exportedAt.slice(0, 10);

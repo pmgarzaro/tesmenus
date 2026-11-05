@@ -143,6 +143,7 @@ export type Targets = {
   proteinG: number;
   carbsG: number | null;
   fatG: number | null;
+  goalWeightKg: number | null;
   notes: string | null;
   isDefault: boolean;
 };
@@ -159,6 +160,7 @@ export function getTargets(owner: Owner): Targets {
     proteinG: row.proteinG,
     carbsG: row.carbsG,
     fatG: row.fatG,
+    goalWeightKg: row.goalWeightKg,
     notes: row.notes,
     isDefault: false,
   };

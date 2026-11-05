@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Scale, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
 import { requireUser } from "@/lib/auth";
@@ -78,7 +78,14 @@ export default async function JournalPage({ searchParams }: { searchParams: Prom
   const nav = "flex size-9 items-center justify-center rounded-full bg-white shadow-sm";
   return (
     <>
-      <PageHeader title="Journal" />
+      <PageHeader
+        title="Journal"
+        action={
+          <Link href="/suivi" className="flex items-center gap-1.5 rounded-full bg-white px-3 py-2 text-sm font-semibold shadow-sm">
+            <Scale className="size-4" aria-hidden /> Poids
+          </Link>
+        }
+      />
 
       <div className="mb-4 flex items-center justify-between gap-2">
         <Link href={`/journal?date=${addDays(date, -1)}`} className={nav} aria-label="Jour précédent">

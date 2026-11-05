@@ -60,7 +60,7 @@ export function TabBar() {
     <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-stone-200 bg-white pb-[env(safe-area-inset-bottom)] print:hidden">
       <ul className="mx-auto flex max-w-3xl">
         {TABS.map((t) => {
-          const active = pathname.startsWith(t.href);
+          const active = pathname.startsWith(t.href) || (t.href === "/journal" && pathname.startsWith("/suivi"));
           return (
             <li key={t.href} className="flex-1">
               <Link

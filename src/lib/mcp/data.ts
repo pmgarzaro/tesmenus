@@ -8,7 +8,9 @@ import { getRecipe, listRecipeSummaries } from "@/lib/recipes/repo";
 import { filterRecipes } from "@/lib/recipes/search";
 import { type Unit, roundForKitchen, scaleQuantity } from "@/lib/recipes/units";
 import { getSettings } from "@/lib/settings";
-import { type LogEntry, type Owner, type Targets, listLog } from "@/lib/journal/repo";
+import { type LogEntry, type Owner, type Targets, getTargets, listLog } from "@/lib/journal/repo";
+import { type BodyEntry, latestWeight, listBody } from "@/lib/body/repo";
+import { MEASURES } from "@/lib/body/measures";
 
 /** Units as a person would write them (pieces have none). */
 const UNIT_NAMES: Record<Unit, string | null> = {
@@ -184,7 +186,40 @@ export function targetsView(t: Targets) {
     protein_g: t.proteinG,
     carbs_g: t.carbsG,
     fat_g: t.fatG,
+    goal_weight_kg: t.goalWeightKg,
     notes: t.notes,
     is_default: t.isDefault,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Weight and measurements
+
+export function bodyEntryView(e: BodyEntry) {
+  return {
+    date: e.date,
+    ...Object.fromEntries(MEASURES.map((m) => [m.api, e[m.key]])),
+    notes: e.notes,
+  };
+}
+
+export function bodyLogView(owner: Owner, dateFrom: string, dateTo: string) {
+  const { entries, weight, summary } = listBody(owner, dateFrom, dateTo);
+  return {
+    date_from: dateFrom,
+    date_to: dateTo,
+    entries: entries.map(bodyEntryView),
+    weight_trend: weight.map((w) => ({ date: w.date, weight_kg: w.weightKg, avg_7d: w.avg7 })),
+    summary: Object.fromEntries(
+      MEASURES.filter((m) => summary[m.key]).map((m) => {
+        const s = summary[m.key]!;
+        return [m.api, { first: s.first, last: s.last, change: s.change, rate_per_week: s.ratePerWeek }];
+      }),
+    ),
+    latest_weight: (() => {
+      const l = latestWeight(owner);
+      return l ? { date: l.date, weight_kg: l.weightKg } : null;
+    })(),
+    goal_weight_kg: getTargets(owner).goalWeightKg,
   };
 }
