@@ -52,7 +52,9 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
           Mode cuisine
         </Link>
       )}
-      {(r.mealType === "plat" || r.mealType === "autre") && <AddToPlanButton recipeId={r.id} plans={openPlans(householdId)} />}
+      {(r.mealType === "plat" || r.mealType === "autre" || r.mealType === "petit-dejeuner") && (
+        <AddToPlanButton recipeId={r.id} plans={openPlans(householdId)} breakfast={r.mealType === "petit-dejeuner"} />
+      )}
 
       <dl className="grid grid-cols-3 gap-2 paper p-3 text-center">
         {[

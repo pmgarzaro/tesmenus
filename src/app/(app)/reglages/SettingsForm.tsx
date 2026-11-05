@@ -1,6 +1,8 @@
 "use client";
 
 import { useActionState } from "react";
+import { SLOTS } from "@/db/schema";
+import { SLOT_LABELS } from "@/lib/labels";
 import type { Settings } from "@/lib/settings";
 import { updateSettings } from "./actions";
 
@@ -25,10 +27,10 @@ export function SettingsForm({ settings }: { settings: Settings }) {
       <fieldset className="flex items-center justify-between gap-4">
         <legend className="float-left">Créneaux actifs</legend>
         <div className="flex gap-4">
-          {(["midi", "soir"] as const).map((slot) => (
-            <label key={slot} className="flex items-center gap-1.5 capitalize">
+          {SLOTS.map((slot) => (
+            <label key={slot} className="flex items-center gap-1.5">
               <input type="checkbox" name="activeSlots" value={slot} defaultChecked={settings.activeSlots.includes(slot)} className="size-5 accent-brand-600" />
-              {slot}
+              {SLOT_LABELS[slot]}
             </label>
           ))}
         </div>
@@ -36,6 +38,13 @@ export function SettingsForm({ settings }: { settings: Settings }) {
       <label className="flex items-center justify-between gap-4">
         <span>Le repas du soir couvre le midi suivant (restes)</span>
         <input type="checkbox" name="dinnerCoversNextLunch" defaultChecked={settings.dinnerCoversNextLunch} className="size-5 accent-brand-600" />
+      </label>
+      <label className="flex items-center justify-between gap-4">
+        <span>
+          Un petit-déjeuner préparé couvre
+          <span className="block text-xs text-stone-500">jours (1 = préparé chaque jour, 3 = egg muffins pour 3 matins…)</span>
+        </span>
+        <input type="number" name="breakfastDays" min={1} max={7} defaultValue={settings.breakfastDays} className={field} />
       </label>
       <div className="flex items-center gap-3">
         <button disabled={pending} className="btn-primary px-5 py-2.5 font-semibold text-white disabled:opacity-60">

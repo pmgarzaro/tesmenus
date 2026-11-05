@@ -1,6 +1,7 @@
 "use client";
 
 import { CalendarPlus, Check } from "lucide-react";
+import type { Slot } from "@/lib/planning/generate";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { editCell } from "@/app/(app)/planning/actions";
@@ -10,13 +11,17 @@ type OpenPlan = {
   id: number;
   startDate: string;
   days: number;
-  entries: { id: number; date: string; slot: "midi" | "soir"; content: string | null }[];
+  entries: { id: number; date: string; slot: Slot; content: string | null }[];
 };
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** From a recipe page: put this recipe on a meal of an upcoming plan. */
-export function AddToPlanButton({ recipeId, plans }: { recipeId: number; plans: OpenPlan[] }) {
+/** `breakfast`: a breakfast recipe goes to breakfasts, the others to lunch / dinner. */
+export function AddToPlanButton({ recipeId, plans: allPlans, breakfast = false }: { recipeId: number; plans: OpenPlan[]; breakfast?: boolean }) {
+  const plans = allPlans
+    .map((p) => ({ ...p, entries: p.entries.filter((e) => (e.slot === "matin") === breakfast) }))
+    .filter((p) => p.entries.length > 0);
   const [open, setOpen] = useState(false);
   const [done, setDone] = useState<{ planId: number; label: string } | null>(null);
   const [error, setError] = useState<string | null>(null);

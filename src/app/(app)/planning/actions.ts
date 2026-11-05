@@ -47,7 +47,7 @@ export async function createPlanAction(payload: NewPlanPayload): Promise<string>
 
   // Free-form wishes → constraints (the form's own choices win).
   const notes: string[] = [];
-  let eatingOut: { date: string; slot: "midi" | "soir" }[] = [];
+  let eatingOut: { date: string; slot: (typeof SLOTS)[number] }[] = [];
   if (p.request?.trim()) {
     if (!aiEnabledFor(householdId)) return "La demande libre nécessite l'IA (désactivée ou non configurée).";
     try {

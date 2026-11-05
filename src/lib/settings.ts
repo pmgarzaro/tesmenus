@@ -10,6 +10,8 @@ export const settingsSchema = z.object({
   servingsPerRecipe: z.number().int().min(1).max(24),
   // A recipe cooked in the evening covers the next day's lunch.
   dinnerCoversNextLunch: z.boolean(),
+  /** A breakfast prepared once covers this many days (batch). */
+  breakfastDays: z.number().int().min(1).max(7),
   /** Ingredients always at home: left out of shopping lists. */
   pantry: z.array(z.string()).max(200),
   /** Use Gemini when GEMINI_API_KEY is set (recipes are then sent to Google). */
@@ -24,6 +26,7 @@ export const DEFAULT_SETTINGS: Settings = {
   people: 2,
   servingsPerRecipe: 4,
   dinnerCoversNextLunch: true,
+  breakfastDays: 1,
   pantry: ["sel", "poivre", "eau"],
   aiEnabled: true,
 };

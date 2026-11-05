@@ -30,19 +30,19 @@ const UNIT_NAMES: Record<Unit, string | null> = {
   sachet: "sachet",
 };
 
-const PLAN_SLOTS = { midi: "lunch", soir: "dinner" } as const;
+const PLAN_SLOTS = { matin: "breakfast", midi: "lunch", soir: "dinner" } as const;
 
 // ---------------------------------------------------------------------------
 // Planning
 
 export type PlannedMeal = {
-  slot: "lunch" | "dinner";
+  slot: "breakfast" | "lunch" | "dinner";
   recipe_id: number | null;
   recipe_name: string | null;
   /** Portions cooked for the whole household (null for leftovers / eating out). */
   servings_planned: number | null;
   is_leftover: boolean;
-  leftover_of: { date: string; slot: "lunch" | "dinner" } | null;
+  leftover_of: { date: string; slot: "breakfast" | "lunch" | "dinner" } | null;
   is_eating_out: boolean;
 };
 
@@ -60,7 +60,7 @@ export function plannedMeals(owner: Owner, date: string) {
   for (const { entry } of rows) if (!bySlot.has(entry.slot)) bySlot.set(entry.slot, entry);
 
   const meals: PlannedMeal[] = [];
-  for (const slot of ["midi", "soir"] as const) {
+  for (const slot of ["matin", "midi", "soir"] as const) {
     const e = bySlot.get(slot);
     if (!e) continue;
     const source = e.isLeftover && e.sourceEntryId

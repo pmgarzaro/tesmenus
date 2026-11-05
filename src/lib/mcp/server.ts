@@ -70,7 +70,7 @@ export function createMcpServer(owner: Owner): McpServer {
     {
       title: "Repas prévus",
       description:
-        "Repas prévus au planning du foyer pour une date (déjeuner = lunch, dîner = dinner). " +
+        "Repas prévus au planning du foyer pour une date (petit-déjeuner = breakfast, déjeuner = lunch, dîner = dinner). " +
         "servings_planned = portions cuisinées pour tout le foyer (souvent plus que le nombre de personnes quand le dîner couvre les restes du lendemain midi). " +
         "Pour les quantités mangées par l'utilisateur, appeler get_recipe avec servings=1.",
       inputSchema: { date: optionalDate },
@@ -122,8 +122,9 @@ export function createMcpServer(owner: Owner): McpServer {
     {
       title: "Créer un planning",
       description:
-        "Crée un planning de repas (midi / soir) pour le foyer. Sans `meals`, l'app tire les recettes elle-même " +
-        "(alternance viande / poisson / végé, pas de répétition, restes du dîner le midi suivant) en respectant les contraintes. " +
+        "Crée un planning de repas (petit-déjeuner / midi / soir) pour le foyer. Sans `meals`, l'app tire les recettes elle-même " +
+        "(alternance viande / poisson / végé, pas de répétition, restes du dîner le midi suivant ; petits-déjeuners parmi les recettes de type petit-dejeuner, " +
+        "préparés pour plusieurs matins selon les réglages) en respectant les contraintes. " +
         "Avec `meals`, place les recettes choisies, et complète le reste si fill_rest. " +
         "Les plannings ne peuvent pas se chevaucher : par défaut il commence le lendemain du planning en cours. " +
         "Utiliser search_recipes pour trouver les recipe_id. À faire seulement à la demande de l'utilisateur.",

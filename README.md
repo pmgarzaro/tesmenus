@@ -30,6 +30,7 @@ Tout fonctionne **sans API payante**. Une IA (Google Gemini, utilisable avec sa 
 - **Deux modes** à la création : *Automatique*, ou *Je remplis moi-même* (planning vide). En remplissant à la main, un dîner couvre automatiquement le midi suivant s'il est libre ; « Compléter les repas vides au hasard » ne remplit que les cases restantes. Depuis une fiche recette, « Ajouter au planning » la place sur un repas.
 - **Contraintes** à la création : temps maximum par jour, recettes à inclure, uniquement des plats congelables, tags à éviter.
 - **Édition** d'un repas : autre recette au hasard, choix dans la bibliothèque, échange avec un autre repas, restes d'un repas précédent, repas extérieur, portions ; « Tout relancer » pour la semaine entière.
+- **Petit-déjeuner** (créneau « Matin », à activer dans *Réglages* ou à la création) : choisi parmi les recettes de type *Petit-déjeuner*, qui ne vont jamais au déjeuner ou au dîner. Un réglage « Un petit-déjeuner préparé couvre N jours » prépare une fournée pour plusieurs matins (ex. egg muffins pour 3 jours), les matins suivants en restes. Restes et échanges ne se mélangent pas entre petit-déjeuner et repas principaux.
 - **Plusieurs semaines** : un nouveau planning démarre par défaut le lendemain de la fin du planning en cours, et deux plannings ne peuvent pas se chevaucher. « Préparer la suite » et les liens semaine précédente / suivante depuis un planning.
 - **Historique** des plannings ; l'onglet Planning ouvre celui en cours.
 - Les dates suivent le fuseau `APP_TIMEZONE` (défaut `Europe/Paris`).

@@ -68,7 +68,7 @@ export const createRecipeShape = {
     .max(100)
     .optional()
     .describe("Étapes dans l'ordre ; durée, type et four sont déduits du texte s'ils manquent"),
-  meal_type: z.enum(MEAL_TYPES).optional().describe("entree | plat | dessert | autre (plat par défaut ; seuls plat et autre vont au planning)"),
+  meal_type: z.enum(MEAL_TYPES).optional().describe("entree | plat | dessert | autre | petit-dejeuner (plat par défaut ; plat et autre vont au déjeuner / dîner, petit-dejeuner au petit-déjeuner du planning)"),
   tags: z.array(z.string().min(1).max(40)).max(30).optional().describe("Ex. viande, poisson, végé, rapide… (sert à l'alternance du planning)"),
   prep_min: z.number().int().min(0).max(1440).nullable().optional(),
   cook_min: z.number().int().min(0).max(2880).nullable().optional(),

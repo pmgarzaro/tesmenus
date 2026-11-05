@@ -191,3 +191,48 @@ describe("several weeks", () => {
     expect(plans.adjacentPlans(d, next)).toMatchObject({ previous: { id: current }, next: null });
   });
 });
+
+describe("breakfast in plans", () => {
+  it("creates, fills, rerolls breakfasts and keeps them apart from main meals", async () => {
+    const { saveSettings } = await import("@/lib/settings");
+    const { createRecipe } = await import("@/lib/recipes/repo");
+    const e = getDb().insert(schema.households).values({ name: "E" }).returning().get().id;
+    seedIfEmpty(e);
+    const bf = (title: string) =>
+      createRecipe(e, {
+        title, description: null, servings: 2, prepMinutes: 10, cookMinutes: 15, mealType: "petit-dejeuner", tags: [],
+        sourceUrl: null, notes: null, fridgeDays: 3, freezable: false,
+        ingredients: [{ quantity: 4, unit: "piece", label: "œufs", aisle: null, optional: false }], steps: [],
+      });
+    const muffins = bf("Egg muffins");
+    const porridge = bf("Porridge");
+    saveSettings(e, { breakfastDays: 2 });
+
+    const { id } = plans.createPlan(e, { startDate: "2026-12-07", days: 3, slots: ["matin", "midi", "soir"], constraints: {} });
+    let p = plans.getPlan(e, id)!;
+    expect(p.entries.map((x) => x.slot).slice(0, 3)).toEqual(["matin", "midi", "soir"]);
+    const m = p.entries.filter((x) => x.slot === "matin");
+    expect([muffins, porridge]).toContain(m[0].recipeId);
+    expect(m[0].servings).toBe(4); // 2 people × 2 mornings
+    expect(m[1]).toMatchObject({ isLeftover: true, sourceEntryId: m[0].id });
+    expect(m[1].recipe!.id).toBe(m[0].recipeId);
+
+    // Breakfast leftovers / swaps never mix with lunch and dinner.
+    const dinner = p.entries.find((x) => x.slot === "soir" && x.date === "2026-12-07")!;
+    expect(plans.setLeftover(e, m[2].id, dinner.id)).toBe(false);
+    expect(plans.swapEntries(e, m[0].id, dinner.id)).toBe(false);
+
+    // Reroll / fill pick breakfast recipes.
+    plans.setEntryRecipe(e, m[2].id, null);
+    plans.fillEmptyEntries(e, id);
+    p = plans.getPlan(e, id)!;
+    expect([muffins, porridge]).toContain(p.entries.find((x) => x.id === m[2].id)!.recipeId);
+    expect(plans.rerollEntry(e, m[2].id)).toBe(true);
+    expect([muffins, porridge]).toContain(plans.getPlan(e, id)!.entries.find((x) => x.id === m[2].id)!.recipeId);
+
+    // Turning dinner leftovers off keeps the breakfast batch.
+    saveSettings(e, { dinnerCoversNextLunch: false });
+    plans.syncOpenPlansWithSettings(e);
+    expect(plans.getPlan(e, id)!.entries.find((x) => x.id === m[1].id)!.isLeftover).toBe(true);
+  });
+});

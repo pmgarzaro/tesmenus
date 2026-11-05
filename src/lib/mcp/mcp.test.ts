@@ -286,6 +286,31 @@ describe("MCP tools", () => {
     expect((await call("get_shopping_list", { date_from: addDays(start, 4), date_to: addDays(start, 4) })).data.items).toEqual([]);
   });
 
+  it("plans breakfasts", async () => {
+    const muffins = await call("create_recipe", {
+      name: "Egg muffins protéinés",
+      servings: 6,
+      meal_type: "petit-dejeuner",
+      ingredients: [{ amount: 6, name: "œufs" }, { amount: 100, unit: "g", name: "jambon" }],
+    });
+    expect(muffins.isError).toBe(false);
+    const plan = await call("create_meal_plan", { days: 2, slots: ["breakfast", "dinner"] });
+    expect(plan.isError).toBe(false);
+    const breakfasts = plan.data.meals.filter((m: { slot: string }) => m.slot === "breakfast");
+    expect(breakfasts).toHaveLength(2);
+    expect(breakfasts.every((m: { recipe_id: number }) => m.recipe_id === muffins.data.id)).toBe(true);
+    const day = await call("get_planned_meals", { date: plan.data.start_date });
+    expect(day.data.meals[0]).toMatchObject({ slot: "breakfast", recipe_name: "Egg muffins protéinés" });
+    // A dinner can't eat breakfast leftovers.
+    expect(
+      await call("set_planned_meal", {
+        date: plan.data.end_date,
+        slot: "dinner",
+        leftovers_of: { date: plan.data.start_date, slot: "breakfast" },
+      }),
+    ).toMatchObject({ isError: true, text: expect.stringMatching(/même type/) });
+  });
+
   it("searches recipes of the household", async () => {
     const res = await call("search_recipes", { query: "chili" });
     expect(res.data.results).toEqual([expect.objectContaining({ name: "Chili con carne" })]);

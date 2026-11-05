@@ -4,7 +4,8 @@ import { ArrowLeftRight, BookOpen, Dices, Eye, Repeat2, Trash2, UtensilsCrossed 
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { type CellAction, editCell } from "@/app/(app)/planning/actions";
-import { formatMinutes } from "@/lib/labels";
+import { SLOT_LABELS, formatMinutes } from "@/lib/labels";
+import { type Slot, isBreakfast, slotOrder } from "@/lib/planning/generate";
 import { shortDate, weekdayName } from "@/lib/planning/dates";
 import { magnetAt } from "@/lib/notes";
 import { fold } from "@/lib/recipes/normalize";
@@ -12,21 +13,21 @@ import { fold } from "@/lib/recipes/normalize";
 export type GridEntry = {
   id: number;
   date: string;
-  slot: "midi" | "soir";
+  slot: Slot;
   recipeId: number | null;
   servings: number | null;
   isLeftover: boolean;
   isEatingOut: boolean;
   hasLeftovers: boolean;
   recipe: { id: number; title: string; tags: string[]; minutes: number } | null;
-  source: { id: number; date: string; slot: "midi" | "soir" } | null;
+  source: { id: number; date: string; slot: Slot } | null;
 };
-type PickerRecipe = { id: number; title: string; minutes: number; tags: string[] };
+type PickerRecipe = { id: number; title: string; minutes: number; tags: string[]; breakfast?: boolean };
 
-const slotLabel = { midi: "Midi", soir: "Soir" };
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-const when = (e: { date: string; slot: "midi" | "soir" }) => `${weekdayName(e.date)} ${e.slot}`;
-const order = (e: GridEntry) => `${e.date}|${e.slot === "midi" ? 0 : 1}`;
+const when = (e: { date: string; slot: Slot }) => `${weekdayName(e.date)} ${e.slot}`;
+const order = (e: GridEntry) => `${e.date}|${slotOrder(e.slot)}`;
+const sameKind = (a: GridEntry, b: GridEntry) => isBreakfast(a.slot) === isBreakfast(b.slot);
 
 export function PlanGrid({ planId, entries, recipes, today }: { planId: number; entries: GridEntry[]; recipes: PickerRecipe[]; today: string }) {
   // Ids, so the sheet always shows the latest data after an edit.
@@ -80,7 +81,7 @@ export function PlanGrid({ planId, entries, recipes, today }: { planId: number; 
             </h2>
             <ul className="divide-y divide-stone-100">
               {entries.filter((e) => e.date === date).map((e) => {
-                const swappable = !swapFrom || (!e.isLeftover && e.id !== swapFrom.id);
+                const swappable = !swapFrom || (!e.isLeftover && e.id !== swapFrom.id && sameKind(e, swapFrom));
                 return (
                   <li key={e.id}>
                     <button
@@ -90,7 +91,7 @@ export function PlanGrid({ planId, entries, recipes, today }: { planId: number; 
                         swapFrom && swappable ? "bg-brand-50 outline-2 outline-brand-500" : ""
                       }`}
                     >
-                      <span className="w-10 shrink-0 font-display text-sm font-semibold uppercase text-stone-500">{slotLabel[e.slot]}</span>
+                      <span className="w-12 shrink-0 font-display text-sm font-semibold uppercase text-stone-500">{SLOT_LABELS[e.slot]}</span>
                       <Cell e={e} />
                     </button>
                   </li>
@@ -177,10 +178,14 @@ function CellSheet({
   const cooks = !e.isLeftover && !e.isEatingOut && e.recipe;
   // Earlier cooked meals whose leftovers this meal could eat.
   const sources = entries
-    .filter((x) => !x.isLeftover && x.recipeId && order(x) < order(e))
+    .filter((x) => !x.isLeftover && x.recipeId && order(x) < order(e) && sameKind(x, e))
     .slice(-3)
     .reverse();
-  const shown = recipes.filter((r) => !query.trim() || fold(r.title + " " + r.tags.join(" ")).includes(fold(query)));
+  // Breakfast recipes for breakfasts, the others for lunch and dinner (all if none fits).
+  const fitting = recipes.filter((r) => !!r.breakfast === isBreakfast(e.slot));
+  const shown = (fitting.length ? fitting : recipes).filter(
+    (r) => !query.trim() || fold(r.title + " " + r.tags.join(" ")).includes(fold(query)),
+  );
   const btn = "flex w-full items-center gap-3 rounded-xl border border-stone-200 px-3 py-2.5 text-left disabled:opacity-50";
   const ico = "size-5 shrink-0 text-brand-700";
 

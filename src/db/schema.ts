@@ -9,7 +9,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
-export const MEAL_TYPES = ["entree", "plat", "dessert", "autre"] as const;
+export const MEAL_TYPES = ["entree", "plat", "dessert", "autre", "petit-dejeuner"] as const;
 export const SOURCE_TYPES = ["photo", "url", "manuel"] as const;
 export const AISLES = [
   "fruits-legumes",
@@ -38,7 +38,8 @@ export const UNITS = [
   "sachet",
 ] as const;
 export const STEP_TYPES = ["preparation", "cuisson", "repos"] as const;
-export const SLOTS = ["midi", "soir"] as const;
+// "matin" = breakfast. Alphabetical order is also the order of the day.
+export const SLOTS = ["matin", "midi", "soir"] as const;
 
 const createdAt = () =>
   text("created_at").notNull().default(sql`(datetime('now'))`);

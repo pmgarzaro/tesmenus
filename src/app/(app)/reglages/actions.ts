@@ -7,7 +7,7 @@ import { testAi } from "@/lib/ai/gemini";
 import { createInvite, requireUser } from "@/lib/auth";
 import { MIN_PASSWORD_LENGTH, hashPassword, verifyPassword } from "@/lib/password";
 import { syncOpenPlansWithSettings } from "@/lib/planning/repo";
-import { saveSettings } from "@/lib/settings";
+import { type Settings, saveSettings } from "@/lib/settings";
 import { revokeConnection } from "@/lib/mcp/oauth";
 
 export async function updateSettings(_prev: string | null, form: FormData): Promise<string | null> {
@@ -15,10 +15,11 @@ export async function updateSettings(_prev: string | null, form: FormData): Prom
   try {
     saveSettings(user.householdId, {
       defaultDays: Number(form.get("defaultDays")),
-      activeSlots: form.getAll("activeSlots").map(String) as ("midi" | "soir")[],
+      activeSlots: form.getAll("activeSlots").map(String) as Settings["activeSlots"],
       people: Number(form.get("people")),
       servingsPerRecipe: Number(form.get("servingsPerRecipe")),
       dinnerCoversNextLunch: form.get("dinnerCoversNextLunch") === "on",
+      breakfastDays: Number(form.get("breakfastDays") ?? 1),
     });
   } catch {
     return "Valeurs invalides";

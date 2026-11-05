@@ -13,11 +13,14 @@ import { getSettings } from "@/lib/settings";
 import { AISLE_ORDER, aggregate, formatItemAmounts } from "@/lib/shopping/aggregate";
 import { linesOf } from "@/lib/shopping/repo";
 
-const TO_APP = { lunch: "midi", dinner: "soir" } as const;
-const TO_API = { midi: "lunch", soir: "dinner" } as const;
+const TO_APP = { breakfast: "matin", lunch: "midi", dinner: "soir" } as const;
+const TO_API = { matin: "breakfast", midi: "lunch", soir: "dinner" } as const;
+const SLOT_FR = { breakfast: "petit-déjeuner", lunch: "midi", dinner: "soir" } as const;
 type ApiSlot = keyof typeof TO_APP;
 
-const slotSchema = z.enum(["lunch", "dinner"], { message: "Créneau : lunch (midi) ou dinner (soir)" });
+const slotSchema = z.enum(["breakfast", "lunch", "dinner"], {
+  message: "Créneau : breakfast (petit-déjeuner), lunch (midi) ou dinner (soir)",
+});
 
 // ---------------------------------------------------------------------------
 // Reading a plan
@@ -58,7 +61,7 @@ function entryAt(owner: Owner, date: string, slot: ApiSlot) {
     )
     .orderBy(desc(schema.mealPlans.id))
     .get();
-  if (!row) throw new JournalError(`Aucun planning ne contient le ${slot === "lunch" ? "midi" : "soir"} du ${date}`);
+  if (!row) throw new JournalError(`Aucun planning ne contient le ${SLOT_FR[slot]} du ${date}`);
   return row.entry;
 }
 
@@ -85,7 +88,11 @@ const mealShape = z.object({
 export const createPlanShape = {
   start_date: dateSchema.optional().describe("Premier jour. Par défaut : lendemain de la fin du planning en cours"),
   days: z.number().int().min(1).max(14).optional().describe("Nombre de jours (réglage du foyer par défaut)"),
-  slots: z.array(slotSchema).min(1).optional().describe("Créneaux planifiés (réglage du foyer par défaut)"),
+  slots: z
+    .array(slotSchema)
+    .min(1)
+    .optional()
+    .describe("Créneaux planifiés : breakfast, lunch, dinner (réglage du foyer par défaut). Les petits-déjeuners utilisent les recettes de type petit-dejeuner"),
   meals: z
     .array(mealShape)
     .max(28)
@@ -131,9 +138,10 @@ export function createPlanFromMcp(owner: Owner, a: CreateArgs) {
   const { id, warnings } = plans.createPlan(h, { startDate, days, slots, constraints, mode: meals.length || !fillRest ? "manual" : "auto" });
 
   // Chosen meals: dinners last so that their leftovers only take still-empty lunches.
+  const rank = { breakfast: 0, lunch: 1, dinner: 2 } as const;
   const cell = (date: string, slot: ApiSlot) =>
     plans.getPlan(h, id)!.entries.find((e) => e.date === date && e.slot === TO_APP[slot])!;
-  const ordered = [...meals].sort((x, y) => (x.slot === y.slot ? x.date.localeCompare(y.date) : x.slot === "lunch" ? -1 : 1));
+  const ordered = [...meals].sort((x, y) => rank[x.slot] - rank[y.slot] || x.date.localeCompare(y.date));
   for (const m of ordered) {
     const e = cell(m.date, m.slot);
     if (m.eating_out) plans.setEatingOut(h, e.id);
@@ -175,7 +183,9 @@ export function setPlannedMeal(owner: Owner, a: SetArgs) {
   } else if (a.leftovers_of) {
     const source = entryAt(owner, a.leftovers_of.date, a.leftovers_of.slot);
     if (!plans.setLeftover(h, e.id, source.id)) {
-      throw new JournalError("Restes impossibles : le repas source doit être cuisiné, plus tôt, et dans le même planning");
+      throw new JournalError(
+        "Restes impossibles : le repas source doit être cuisiné, plus tôt, dans le même planning, et du même type (petit-déjeuner ↔ petit-déjeuner)",
+      );
     }
   }
   if (a.servings !== undefined && !plans.setServings(h, e.id, a.servings)) {

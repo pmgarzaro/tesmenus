@@ -16,7 +16,11 @@ export const MEAL_TYPE_LABELS: Record<(typeof MEAL_TYPES)[number], string> = {
   plat: "Plat",
   dessert: "Dessert",
   autre: "Autre",
+  "petit-dejeuner": "Petit-déjeuner",
 };
+
+/** Planning slots, in the order of the day. */
+export const SLOT_LABELS = { matin: "Matin", midi: "Midi", soir: "Soir" } as const;
 
 export const STEP_TYPE_LABELS: Record<(typeof STEP_TYPES)[number], string> = {
   preparation: "Préparation",

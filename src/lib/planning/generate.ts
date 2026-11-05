@@ -1,5 +1,5 @@
 // Weekly meal plan generation: deterministic (seeded) and testable, no LLM.
-import type { SLOTS } from "@/db/schema";
+import type { MEAL_TYPES, SLOTS } from "@/db/schema";
 import { fold } from "@/lib/recipes/normalize";
 import { addDays, dateRange, shortDate } from "./dates";
 
@@ -9,7 +9,7 @@ export type PlannerRecipe = {
   id: number;
   title: string;
   tags: string[];
-  mealType: "entree" | "plat" | "dessert" | "autre";
+  mealType: (typeof MEAL_TYPES)[number];
   totalMinutes: number; // 0 = unknown
   freezable: boolean;
   ingredientNames: string[];
@@ -32,6 +32,8 @@ export type PlanOptions = {
   people: number;
   servingsPerRecipe: number;
   dinnerCoversNextLunch: boolean;
+  /** A breakfast prepared once covers this many days (1 = every day). */
+  breakfastDays?: number;
   constraints?: PlanConstraints;
   /** Recipes eaten the week before: avoided if possible. */
   recentRecipeIds?: number[];
@@ -55,6 +57,10 @@ export type PlanEntry = {
 export type GeneratedPlan = { entries: PlanEntry[]; warnings: string[] };
 
 export const cellKey = (date: string, slot: Slot) => `${date}|${slot}`;
+
+/** Breakfast and main meals use different recipes and never share leftovers. */
+export const isBreakfast = (slot: Slot) => slot === "matin";
+export const slotOrder = (slot: Slot) => ["matin", "midi", "soir"].indexOf(slot);
 
 // Pantry staples do not count as "shared ingredients".
 const STAPLES = new Set(
@@ -108,7 +114,7 @@ export function layout(o: PlanOptions): { cooks: CookSlot[]; leftovers: Map<stri
 }
 
 function eligible(r: PlannerRecipe, c: PlanConstraints): boolean {
-  if (r.mealType === "dessert" || r.mealType === "entree") return false;
+  if (r.mealType !== "plat" && r.mealType !== "autre") return false;
   if (c.onlyFreezable && !r.freezable) return false;
   if (c.excludeTags?.length && r.tags.some((t) => c.excludeTags!.includes(t))) return false;
   return true;
@@ -197,6 +203,77 @@ function attempt(o: PlanOptions, pool: PlannerRecipe[], cooks: CookSlot[], rando
   return { assigned, warnings, total };
 }
 
+type BreakfastCell = { recipeId: number | null; servings: number | null; sourceKey: string | null };
+
+/**
+ * Breakfasts: recipes of type "petit-déjeuner", repeated freely (few people
+ * have more than a handful). With `breakfastDays` > 1, one preparation covers
+ * the next days as leftovers (e.g. egg muffins for 3 days). Fixed cells are
+ * kept and never extended.
+ */
+function planBreakfasts(o: PlanOptions, recipes: PlannerRecipe[], random: () => number) {
+  const cells = new Map<string, BreakfastCell>();
+  const warnings: string[] = [];
+  if (!o.slots.includes("matin")) return { cells, warnings };
+  const c = o.constraints ?? {};
+  const pool = recipes.filter(
+    (r) => r.mealType === "petit-dejeuner" && !(c.excludeTags?.length && r.tags.some((t) => c.excludeTags!.includes(t))),
+  );
+  const fixed = o.fixed ?? {};
+  const avoid = new Set(o.avoid ?? []);
+  const recent = new Set(o.recentRecipeIds ?? []);
+  const batch = Math.max(1, Math.min(7, o.breakfastDays ?? 1));
+  const dates = dateRange(o.startDate, o.days);
+  const toInclude = (c.include ?? []).filter((id) => pool.some((r) => r.id === id));
+  let previous: number | null = null;
+  let cook: { key: string; covered: number } | null = null;
+  const counts = new Map<number, number>();
+
+  for (const date of dates) {
+    const key = cellKey(date, "matin");
+    if (key in fixed) {
+      cook = null; // a decided meal ends the current batch
+      const id = fixed[key];
+      if (id !== null) previous = id;
+      continue;
+    }
+    if (cook && cook.covered < batch) {
+      cells.set(key, { recipeId: null, servings: null, sourceKey: cook.key });
+      cook.covered++;
+      continue;
+    }
+    const candidates = pool.filter((r) => !avoid.has(r.id));
+    if (candidates.length === 0) {
+      cells.set(key, { recipeId: null, servings: null, sourceKey: null });
+      cook = null;
+      continue;
+    }
+    const forced = toInclude.shift();
+    const pick =
+      forced ??
+      candidates
+        .map((r) => ({
+          id: r.id,
+          s: (r.id === previous ? -20 : 0) - 8 * (counts.get(r.id) ?? 0) - (recent.has(r.id) ? 5 : 0) + random() * 6,
+        }))
+        .sort((a, b) => b.s - a.s)[0].id;
+    counts.set(pick, (counts.get(pick) ?? 0) + 1);
+    cells.set(key, { recipeId: pick, servings: o.people, sourceKey: null });
+    cook = { key, covered: 1 };
+    previous = pick;
+  }
+  // Each preparation is made for every day it covers.
+  for (const [key, cell] of cells) {
+    if (cell.recipeId === null) continue;
+    const days = 1 + [...cells.values()].filter((x) => x.sourceKey === key).length;
+    cell.servings = o.people * days;
+  }
+  if (pool.length === 0) {
+    warnings.push("Aucune recette de type « Petit-déjeuner » : ajoute-en pour remplir les petits-déjeuners.");
+  }
+  return { cells, warnings };
+}
+
 export function generatePlan(o: PlanOptions, recipes: PlannerRecipe[]): GeneratedPlan {
   const c = o.constraints ?? {};
   const pool = recipes.filter((r) => eligible(r, c));
@@ -210,12 +287,20 @@ export function generatePlan(o: PlanOptions, recipes: PlannerRecipe[]): Generate
     if (!best || a.total > best.total) best = a;
   }
   const { assigned, warnings } = best!;
-  if (pool.length === 0) warnings.unshift("Aucune recette ne correspond aux contraintes.");
+  const hasMains = o.slots.some((s) => !isBreakfast(s));
+  if (pool.length === 0 && hasMains) warnings.unshift("Aucune recette ne correspond aux contraintes.");
+  const breakfasts = planBreakfasts(o, recipes, random);
+  warnings.push(...breakfasts.warnings);
 
   const entries: PlanEntry[] = [];
   for (const date of dateRange(o.startDate, o.days)) {
-    for (const slot of (["midi", "soir"] as const).filter((s) => o.slots.includes(s))) {
+    for (const slot of (["matin", "midi", "soir"] as const).filter((s) => o.slots.includes(s))) {
       const key = cellKey(date, slot);
+      if (isBreakfast(slot)) {
+        const b = breakfasts.cells.get(key) ?? { recipeId: (o.fixed ?? {})[key] ?? null, servings: o.people, sourceKey: null };
+        entries.push({ date, slot, recipeId: b.recipeId, servings: b.sourceKey ? null : b.servings, isLeftover: !!b.sourceKey, sourceKey: b.sourceKey });
+        continue;
+      }
       const source = leftovers.get(key);
       if (source) {
         const fromRecipe = assigned.get(source) ?? null;
