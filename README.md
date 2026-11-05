@@ -63,6 +63,16 @@ Tout fonctionne **sans API payante**. Une IA (Google Gemini, utilisable avec sa 
 - **Confidentialité** : avec l'IA, le contenu concerné (photo, texte, demande, titres des recettes pour le planning) est envoyé à Google ; sur l'offre gratuite, Google peut l'utiliser pour améliorer ses services.
 - **Vide-frigo** (sans IA) : *Recettes → 🧊 Vide-frigo*, saisir ce qu'on a ; les recettes sont classées par pourcentage d'ingrédients disponibles, avec ce qui manque (basiques et « toujours au placard » considérés comme présents).
 
+## Journal alimentaire et Claude (MCP)
+
+- **Journal** (onglet *Journal*) : ce qu'on a réellement mangé, par jour et par créneau (petit-déj, déjeuner, collation, dîner, dessert), en texte libre avec estimation kcal / protéines facultative. Un bouton par repas du planning pré-remplit la recette, 1 portion et l'estimation de l'appli. Totaux du jour comparés aux objectifs (2170 kcal / 140 g de protéines par défaut, modifiables). Journal et objectifs sont **personnels** (par compte), pas partagés avec le foyer.
+- **Serveur MCP** sur `/mcp` (transport Streamable HTTP, sans état) pour que Claude lise le planning et les recettes et tienne le journal. Outils : `get_planned_meals`, `get_recipe` (ingrédients recalculés pour N portions, mêmes arrondis que l'appli), `search_recipes`, `log_meal`, `update_meal_log`, `delete_meal_log`, `get_meal_log` (avec totaux par jour), `get_nutrition_targets`, `set_nutrition_targets`. Aucun outil n'écrit dans les recettes ni le planning.
+- **Ajout dans claude.ai** : Paramètres → Connecteurs → *Ajouter un connecteur personnalisé* → `https://<domaine>/mcp`. Claude ouvre la page de connexion de l'appli puis un écran d'autorisation. Les accès accordés se retirent dans *Réglages → Claude*.
+- **Authentification** : OAuth 2.1 intégré (découverte `/.well-known/oauth-protected-resource` et `/.well-known/oauth-authorization-server`, enregistrement dynamique des clients, code + PKCE S256, jetons d'1 h renouvelables 90 jours avec rotation). Seuls des hachages SHA-256 des jetons sont stockés. Sans jeton valide, `/mcp` répond `401`.
+- **Jeton statique** (optionnel, pour curl ou des scripts) : `MCP_TOKEN` (≥ 32 caractères aléatoires, ex. `openssl rand -base64 48`) + `MCP_TOKEN_EMAIL` (compte concerné), envoyé en `Authorization: Bearer …`. claude.ai n'en a pas besoin.
+- **HTTPS obligatoire** en production (claude.ai appelle le serveur depuis Internet, pas de `localhost`). Derrière un proxy, l'adresse publique est déduite des en-têtes `X-Forwarded-*` ; sinon définir `PUBLIC_URL`.
+- **Test local** : `npx @modelcontextprotocol/inspector`, URL `http://localhost:3000/mcp`, transport *Streamable HTTP* (le flux OAuth fonctionne aussi en local).
+
 ## Stack
 
 Next.js 16 (App Router) + TypeScript, Drizzle ORM sur SQLite (`better-sqlite3`), Tailwind CSS 4, zod, Vitest.
@@ -81,7 +91,7 @@ Au démarrage, la base `data/app.db` est créée et les migrations (`drizzle/`) 
 
 | Commande | Rôle |
 |---|---|
-| `npm test` | Tests unitaires et d'intégration (Vitest, ~200 tests) |
+| `npm test` | Tests unitaires et d'intégration (Vitest, ~250 tests) |
 | `npm run test:e2e` | Parcours complet dans Chromium (Playwright), après `npm run build` |
 | `npm run lint` | Vérification TypeScript |
 | `npm run db:generate` | Génère une migration après modification de `src/db/schema.ts` |
@@ -99,7 +109,7 @@ docker compose up -d --build
 
 ## Déploiement sur Railway
 
-Le dépôt contient un `railway.json` : Railway construit le `Dockerfile` et vérifie `/api/health`.
+Le dépôt contient un `railway.json` : Railway construit le `Dockerfile` et vérifie `/api/health` (aussi disponible sur `/health`).
 
 1. **New Project → Deploy from GitHub repo** → choisir ce dépôt.
 2. **Variables** : aucune n'est obligatoire. `SESSION_SECRET` est optionnelle (sinon un secret est généré dans le volume).
@@ -120,6 +130,8 @@ Le port (`PORT`) est fourni par Railway et le cookie de session passe automatiqu
 | `GEMINI_MODEL` | Modèle(s) Gemini à essayer en premier, séparés par des virgules |
 | `APP_TIMEZONE` | Fuseau horaire pour « aujourd'hui » (défaut `Europe/Paris`) |
 | `COOKIE_SECURE` | Force `true`/`false` ; par défaut détecté selon HTTPS |
+| `PUBLIC_URL` | Adresse publique (ex. `https://menus.example.com`) pour les métadonnées OAuth du serveur MCP ; déduite des en-têtes sinon |
+| `MCP_TOKEN` / `MCP_TOKEN_EMAIL` | Jeton statique optionnel pour `/mcp` (≥ 32 caractères) et e-mail du compte pour lequel il agit |
 
 ## Avancement
 
@@ -130,4 +142,5 @@ Le port (`PORT`) est fourni par Railway et le cookie de session passe automatiqu
 5. ✅ Planning (génération + édition + historique)
 6. ✅ Liste de courses (agrégation + conversion + rayons)
 7. ✅ Batch cooking (fiche + mode cuisine)
-8. ⬜ Finitions mobile, tests
+8. ✅ Journal alimentaire + serveur MCP pour Claude
+9. ⬜ Finitions mobile, tests

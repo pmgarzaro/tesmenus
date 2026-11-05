@@ -8,6 +8,7 @@ import { createInvite, requireUser } from "@/lib/auth";
 import { MIN_PASSWORD_LENGTH, hashPassword, verifyPassword } from "@/lib/password";
 import { syncOpenPlansWithSettings } from "@/lib/planning/repo";
 import { saveSettings } from "@/lib/settings";
+import { revokeConnection } from "@/lib/mcp/oauth";
 
 export async function updateSettings(_prev: string | null, form: FormData): Promise<string | null> {
   const user = await requireUser();
@@ -88,4 +89,10 @@ export async function setAiEnabled(enabled: boolean): Promise<void> {
 export async function testAiAction() {
   await requireUser();
   return testAi();
+}
+
+export async function revokeClaudeConnection(form: FormData): Promise<void> {
+  const user = await requireUser();
+  revokeConnection(user.id, String(form.get("clientId") ?? ""));
+  revalidatePath("/reglages");
 }
