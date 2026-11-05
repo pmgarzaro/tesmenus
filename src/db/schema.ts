@@ -239,3 +239,86 @@ export const invites = sqliteTable("invites", {
   createdAt: createdAt(),
   usedAt: text("used_at"),
 });
+
+// ---------------------------------------------------------------------------
+// Food journal and nutrition targets. Personal (per user), not per household:
+// each member logs what they actually ate. Written by the app and by Claude
+// through the MCP server (/mcp).
+
+export const LOG_SLOTS = ["breakfast", "lunch", "snack", "dinner", "dessert"] as const;
+
+export const mealLog = sqliteTable(
+  "meal_log",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    date: text("date").notNull(), // YYYY-MM-DD, APP_TIMEZONE
+    slot: text("slot", { enum: LOG_SLOTS }).notNull(),
+    recipeId: integer("recipe_id").references(() => recipes.id, { onDelete: "set null" }),
+    servings: real("servings"),
+    description: text("description").notNull(),
+    estKcal: real("est_kcal"),
+    estProteinG: real("est_protein_g"),
+    notes: text("notes"),
+    createdAt: createdAt(),
+  },
+  (t) => [index("meal_log_user_date_idx").on(t.userId, t.date)],
+);
+
+export const nutritionTargets = sqliteTable("nutrition_targets", {
+  userId: integer("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  kcalPerDay: real("kcal_per_day").notNull(),
+  proteinG: real("protein_g").notNull(),
+  notes: text("notes"),
+  updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
+});
+
+// ---------------------------------------------------------------------------
+// OAuth 2.1 for the MCP server (claude.ai custom connectors). Secrets, codes
+// and tokens are stored as SHA-256 hashes only.
+
+export const oauthClients = sqliteTable("oauth_clients", {
+  clientId: text("client_id").primaryKey(),
+  clientSecretHash: text("client_secret_hash"), // null for public clients (PKCE only)
+  clientName: text("client_name"),
+  redirectUris: text("redirect_uris", { mode: "json" }).$type<string[]>().notNull(),
+  tokenEndpointAuthMethod: text("token_endpoint_auth_method").notNull().default("none"),
+  createdAt: createdAt(),
+});
+
+export const oauthCodes = sqliteTable("oauth_codes", {
+  codeHash: text("code_hash").primaryKey(),
+  clientId: text("client_id")
+    .notNull()
+    .references(() => oauthClients.clientId, { onDelete: "cascade" }),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  redirectUri: text("redirect_uri").notNull(),
+  codeChallenge: text("code_challenge").notNull(),
+  scope: text("scope"),
+  resource: text("resource"),
+  expiresAt: integer("expires_at").notNull(), // epoch ms
+});
+
+export const oauthTokens = sqliteTable(
+  "oauth_tokens",
+  {
+    tokenHash: text("token_hash").primaryKey(),
+    kind: text("kind", { enum: ["access", "refresh"] }).notNull(),
+    clientId: text("client_id")
+      .notNull()
+      .references(() => oauthClients.clientId, { onDelete: "cascade" }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    scope: text("scope"),
+    expiresAt: integer("expires_at").notNull(), // epoch ms
+    createdAt: createdAt(),
+  },
+  (t) => [index("oauth_tokens_user_idx").on(t.userId)],
+);

@@ -4,9 +4,11 @@ import { PageHeader } from "@/components/PageHeader";
 import { getDb, schema } from "@/db";
 import { requireUser } from "@/lib/auth";
 import { getSettings } from "@/lib/settings";
+import { listConnections } from "@/lib/mcp/oauth";
 import { aiConfigured } from "@/lib/ai/gemini";
 import { AiTest, AiToggle, HouseholdNameForm, InviteButtons, PasswordForm } from "./AccountSection";
-import { loadSampleRecipes } from "./actions";
+import { loadSampleRecipes, revokeClaudeConnection } from "./actions";
+import { headers } from "next/headers";
 import { SettingsForm } from "./SettingsForm";
 
 export const dynamic = "force-dynamic";
@@ -25,6 +27,11 @@ export default async function SettingsPage() {
     .from(schema.households)
     .where(eq(schema.households.id, user.householdId))
     .get()!;
+  const connections = listConnections(user.id);
+  const h = await headers();
+  const origin =
+    process.env.PUBLIC_URL?.replace(/\/+$/, "") ||
+    `${h.get("x-forwarded-proto")?.split(",")[0].trim() || "http"}://${h.get("x-forwarded-host") || h.get("host")}`;
 
   return (
     <>
@@ -51,6 +58,35 @@ export default async function SettingsPage() {
             Non configurée : l&apos;appli utilise ses règles locales. Pour l&apos;activer, ajoute la variable{" "}
             <code className="rounded bg-stone-100 px-1">GEMINI_API_KEY</code> sur le serveur (clé gratuite sur Google AI Studio).
           </p>
+        )}
+      </section>
+
+      <section className="mt-6 space-y-3 paper p-4">
+        <h2 className="font-semibold">Claude (connecteur MCP)</h2>
+        <p className="text-sm text-stone-600">
+          Claude peut lire le planning et les recettes, et tenir ton journal alimentaire. Dans claude.ai : Paramètres →
+          Connecteurs → Ajouter un connecteur personnalisé, avec l&apos;adresse :
+        </p>
+        <code className="block break-all rounded bg-stone-100 px-2 py-1.5 text-sm">{origin}/mcp</code>
+        <p className="text-sm text-stone-500">
+          Claude te demandera de te connecter ici puis d&apos;autoriser l&apos;accès. Il ne peut pas modifier les recettes ni le
+          planning.
+        </p>
+        {connections.length > 0 && (
+          <ul className="space-y-1.5 text-sm">
+            {connections.map((c) => (
+              <li key={c.clientId} className="flex items-center justify-between gap-2">
+                <span>
+                  <span className="font-medium">{c.name}</span>{" "}
+                  <span className="text-stone-500">autorisé le {c.lastAuthorized.slice(0, 10)}</span>
+                </span>
+                <form action={revokeClaudeConnection}>
+                  <input type="hidden" name="clientId" value={c.clientId} />
+                  <button className="text-red-700 underline">Retirer l&apos;accès</button>
+                </form>
+              </li>
+            ))}
+          </ul>
         )}
       </section>
 

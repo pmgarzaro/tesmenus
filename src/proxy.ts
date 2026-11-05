@@ -10,12 +10,13 @@ export async function proxy(request: NextRequest) {
     return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
   }
   const url = new URL("/login", request.url);
-  if (request.nextUrl.pathname !== "/") url.searchParams.set("next", request.nextUrl.pathname);
+  // Keep the query: the OAuth consent page needs its parameters after login.
+  if (request.nextUrl.pathname !== "/") url.searchParams.set("next", request.nextUrl.pathname + request.nextUrl.search);
   return NextResponse.redirect(url);
 }
 
 export const config = {
   matcher: [
-    "/((?!login|signup|api/health|_next/static|_next/image|favicon.ico|manifest.webmanifest|icon.svg|icon-192.png|icon-512.png).*)",
+    "/((?!login|signup|api/health|health|mcp|oauth/register|oauth/token|oauth/revoke|\\.well-known|_next/static|_next/image|favicon.ico|manifest.webmanifest|icon.svg|icon-192.png|icon-512.png).*)",
   ],
 };
