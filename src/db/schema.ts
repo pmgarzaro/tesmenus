@@ -152,6 +152,8 @@ export type TemplateEntry = {
   isEatingOut: boolean;
   /** Cell whose leftovers cover this meal. */
   leftoverOf: { day: number; slot: (typeof SLOTS)[number] } | null;
+  label?: string | null;
+  note?: string | null;
 };
 
 export const planTemplates = sqliteTable("plan_templates", {
@@ -179,6 +181,10 @@ export const mealPlanEntries = sqliteTable(
     isEatingOut: integer("is_eating_out", { mode: "boolean" }).notNull().default(false),
     // Entry whose leftovers cover this meal.
     sourceEntryId: integer("source_entry_id"),
+    /** Meal without a recipe, in free text ("raclette", "chez les beaux-parents"). */
+    label: text("label"),
+    /** Instruction for this meal ("200 g de lieu et de pommes de terre"). */
+    note: text("note"),
   },
   (t) => [index("meal_plan_entries_plan_idx").on(t.planId)],
 );

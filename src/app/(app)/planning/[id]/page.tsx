@@ -41,6 +41,8 @@ export default async function PlanPage({
     servings: e.servings,
     isLeftover: e.isLeftover,
     isEatingOut: e.isEatingOut,
+    label: e.label,
+    note: e.note,
     hasLeftovers: e.hasLeftovers,
     source: e.source,
     recipe: e.recipe && { id: e.recipe.id, title: e.recipe.title, tags: e.recipe.tags, minutes: totalMinutes(e.recipe) },
@@ -49,7 +51,7 @@ export default async function PlanPage({
   const end = addDays(plan.startDate, plan.days - 1);
   const pill = "inline-flex items-center gap-0.5 rounded-full bg-white px-3 py-1.5 text-sm shadow-sm";
   const cooked = entries.filter((e) => e.recipe && !e.isLeftover).length;
-  const empty = entries.filter((e) => !e.recipe && !e.isEatingOut).length;
+  const empty = entries.filter((e) => !e.recipe && !e.isEatingOut && !e.label).length;
 
   return (
     <>

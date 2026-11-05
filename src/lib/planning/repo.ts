@@ -262,6 +262,7 @@ export function setEntryRecipe(householdId: number, entryId: number, recipeId: n
     recipeId,
     isLeftover: false,
     isEatingOut: false,
+    label: null,
     sourceEntryId: null,
     servings: recipeId === null ? null : owned.entry.recipeId ? owned.entry.servings : cookingServings(owned.plan, entryId),
   });
@@ -287,7 +288,7 @@ function linkNextLunch(plan: Plan, dinner: { id: number; date: string; slot: str
       ),
     )
     .get();
-  if (!lunch || lunch.recipeId || lunch.isLeftover || lunch.isEatingOut) return;
+  if (!lunch || lunch.recipeId || lunch.isLeftover || lunch.isEatingOut || lunch.label) return;
   update(lunch.id, { isLeftover: true, sourceEntryId: dinner.id, recipeId: null, servings: null });
   const current = getDb().select().from(schema.mealPlanEntries).where(eq(schema.mealPlanEntries.id, dinner.id)).get();
   if (current && (current.servings ?? 0) < o.servingsPerRecipe) update(dinner.id, { servings: o.servingsPerRecipe });
@@ -302,7 +303,7 @@ export function fillEmptyEntries(householdId: number, planId: number, onlyIds?: 
   for (const slot of ["soir", "midi", "matin"] as const) {
     const plan = getPlan(householdId, planId);
     if (!plan) return null;
-    const isEmpty = (e: PlanEntryView) => !e.recipeId && !e.isLeftover && !e.isEatingOut;
+    const isEmpty = (e: PlanEntryView) => !e.recipeId && !e.isLeftover && !e.isEatingOut && !e.label;
     const targets = plan.entries.filter(
       (e) => isEmpty(e) && e.slot === slot && (!onlyIds || onlyIds.includes(e.id)),
     );
@@ -387,7 +388,33 @@ export function syncOpenPlansWithSettings(householdId: number): number {
 export function setEatingOut(householdId: number, entryId: number): boolean {
   if (!ownedEntry(householdId, entryId)) return false;
   releaseDependents(entryId);
-  update(entryId, { recipeId: null, isLeftover: false, isEatingOut: true, sourceEntryId: null, servings: null });
+  update(entryId, { recipeId: null, isLeftover: false, isEatingOut: true, label: null, sourceEntryId: null, servings: null });
+  return true;
+}
+
+/**
+ * A meal without a recipe, in free text ("raclette", "salade au thon", "chez
+ * les beaux-parents"); `eatingOut` when it is not eaten at home.
+ */
+export function setEntryLabel(householdId: number, entryId: number, label: string, eatingOut = false): boolean {
+  const text = label.trim().slice(0, 120);
+  if (!text || !ownedEntry(householdId, entryId)) return false;
+  releaseDependents(entryId);
+  update(entryId, { recipeId: null, isLeftover: false, isEatingOut: eatingOut, label: text, sourceEntryId: null, servings: null });
+  return true;
+}
+
+/** Instruction for one meal ("200 g de lieu et de pommes de terre"); empty removes it. */
+export function setEntryNote(householdId: number, entryId: number, note: string | null): boolean {
+  if (!ownedEntry(householdId, entryId)) return false;
+  update(entryId, { note: note?.trim().slice(0, 300) || null });
+  return true;
+}
+
+/** Empties a meal: no recipe, text or note. */
+export function clearEntry(householdId: number, entryId: number): boolean {
+  if (!setEntryRecipe(householdId, entryId, null)) return false;
+  update(entryId, { note: null });
   return true;
 }
 
@@ -401,7 +428,7 @@ export function setLeftover(householdId: number, entryId: number, sourceEntryId:
   // Breakfast leftovers feed breakfasts only, and the other way round.
   if (isBreakfast(source.entry.slot) !== isBreakfast(owned.entry.slot)) return false;
   releaseDependents(entryId);
-  update(entryId, { recipeId: null, isLeftover: true, isEatingOut: false, sourceEntryId, servings: null });
+  update(entryId, { recipeId: null, isLeftover: true, isEatingOut: false, label: null, sourceEntryId, servings: null });
   // The cooked meal now has to feed one more meal.
   const o = optionsOf(owned.plan);
   if ((source.entry.servings ?? 0) < o.servingsPerRecipe) update(sourceEntryId, { servings: o.servingsPerRecipe });
@@ -446,7 +473,13 @@ export function swapEntries(householdId: number, aId: number, bId: number): bool
   const b = ownedEntry(householdId, bId);
   if (!a || !b || a.plan.id !== b.plan.id || a.entry.isLeftover || b.entry.isLeftover) return false;
   if (isBreakfast(a.entry.slot) !== isBreakfast(b.entry.slot)) return false;
-  const pick = (e: typeof a.entry) => ({ recipeId: e.recipeId, isEatingOut: e.isEatingOut, servings: e.servings });
+  const pick = (e: typeof a.entry) => ({
+    recipeId: e.recipeId,
+    isEatingOut: e.isEatingOut,
+    servings: e.servings,
+    label: e.label,
+    note: e.note,
+  });
   getDb().transaction(() => {
     update(aId, pick(b.entry));
     update(bId, pick(a.entry));
@@ -476,7 +509,9 @@ export function openPlans(householdId: number) {
           id: e.id,
           date: e.date,
           slot: e.slot,
-          content: e.isEatingOut
+          content: e.label
+            ? e.label
+            : e.isEatingOut
             ? "Repas extérieur"
             : e.isLeftover && e.recipe
               ? `Restes : ${e.recipe.title}`

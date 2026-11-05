@@ -19,6 +19,8 @@ export function saveTemplate(householdId: number, planId: number, name: string):
     servings: e.isLeftover ? null : e.servings,
     isEatingOut: e.isEatingOut,
     leftoverOf: e.isLeftover && e.source ? { day: day(e.source.date), slot: e.source.slot } : null,
+    label: e.label,
+    note: e.note,
   }));
   return getDb()
     .insert(schema.planTemplates)
@@ -104,8 +106,11 @@ export function createPlanFromTemplate(
   db.transaction(() => {
     for (const e of tpl.entries) {
       const entryId = cellOf(e.day, e.slot);
-      if (!entryId || e.leftoverOf) continue;
-      if (e.isEatingOut) set(entryId, { isEatingOut: true });
+      if (!entryId) continue;
+      if (e.note) set(entryId, { note: e.note });
+      if (e.leftoverOf) continue;
+      if (e.label) set(entryId, { label: e.label, isEatingOut: e.isEatingOut });
+      else if (e.isEatingOut) set(entryId, { isEatingOut: true });
       else if (e.recipeId && owned.has(e.recipeId)) {
         set(entryId, { recipeId: e.recipeId, servings: e.servings });
         cooked.add(`${e.day}|${e.slot}`);
