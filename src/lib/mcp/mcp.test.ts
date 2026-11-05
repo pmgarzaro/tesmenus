@@ -172,6 +172,8 @@ describe("MCP tools", () => {
   it("lists the tools", async () => {
     const res = await rpc("tools/list", {});
     const names = (await res.json()).result.tools.map((t: { name: string }) => t.name);
+    const { toolNames } = await import("./server");
+    expect(toolNames()).toEqual([...names].sort());
     expect(names.sort()).toEqual(
       [
         "delete_meal_log",
@@ -284,6 +286,67 @@ describe("MCP tools", () => {
     );
     // The next day only has leftovers and eating out: nothing to buy.
     expect((await call("get_shopping_list", { date_from: addDays(start, 4), date_to: addDays(start, 4) })).data.items).toEqual([]);
+  });
+
+  it("plans free-text meals, notes and leftovers", async () => {
+    const { addDays } = await import("@/lib/planning/dates");
+    const lieu = await call("create_recipe", {
+      name: "Lieu vapeur et pommes de terre",
+      servings: 2,
+      marinade_min: 30,
+      ingredients: [{ amount: 400, unit: "g", name: "lieu" }, { amount: 400, unit: "g", name: "pommes de terre" }],
+      steps: ["Préparer la marinade citron-aneth et y mettre le lieu.", "Cuire à la vapeur 12 min."],
+    });
+    expect(lieu.data.steps).toEqual([
+      "Préparer la marinade citron-aneth et y mettre le lieu.",
+      "Laisser mariner 30 min.",
+      "Cuire à la vapeur 12 min.",
+    ]);
+    const empty = await call("create_meal_plan", { days: 2, slots: ["lunch", "dinner"], fill_rest: false });
+    expect(empty.data.meals.every((m: { recipe_id: number | null }) => m.recipe_id === null)).toBe(true);
+    const d0 = empty.data.start_date;
+    const d1 = addDays(d0, 1);
+    await call("set_planned_meal", { date: d0, slot: "lunch", label: "McDo", eating_out: true });
+    await call("set_planned_meal", { date: d0, slot: "dinner", recipe_id: lieu.data.id, servings_planned: 3, note: "200 g de lieu et de pommes de terre" });
+    await call("set_planned_meal", { date: d1, slot: "lunch", leftovers_of: { date: d0, slot: "dinner" } });
+    const plan = await call("set_planned_meal", { date: d1, slot: "dinner", label: "Raclette" });
+    const at = (d: string, s: string) => plan.data.meals.find((m: { date: string; slot: string }) => m.date === d && m.slot === s);
+    expect(at(d0, "lunch")).toMatchObject({ label: "McDo", is_eating_out: true, recipe_id: null });
+    // 3 portions asked, then raised to 4 when the next lunch took its leftovers (app rule).
+    expect(at(d0, "dinner")).toMatchObject({ recipe_id: lieu.data.id, servings_planned: 4, note: "200 g de lieu et de pommes de terre" });
+    expect(at(d1, "lunch")).toMatchObject({ is_leftover: true, recipe_id: lieu.data.id });
+    expect(at(d1, "dinner")).toMatchObject({ label: "Raclette", is_eating_out: false });
+    expect((await call("get_planned_meals", { date: d1 })).data.meals.map((m: { label: string | null }) => m.label)).toEqual([null, "Raclette"]);
+    // A free-text meal needs nothing from the shops.
+    expect((await call("get_shopping_list", { date_from: d1, date_to: d1 })).data.items).toEqual([]);
+
+    // Note alone, then clear.
+    expect((await call("set_planned_meal", { date: d1, slot: "dinner", note: "fromage pour 4" })).data.meals.find(
+      (m: { date: string; slot: string }) => m.date === d1 && m.slot === "dinner",
+    )).toMatchObject({ label: "Raclette", note: "fromage pour 4" });
+    expect((await call("set_planned_meal", { date: d1, slot: "dinner", clear: true })).data.meals.find(
+      (m: { date: string; slot: string }) => m.date === d1 && m.slot === "dinner",
+    )).toMatchObject({ label: null, note: null, recipe_id: null });
+
+    // All in one call, as a 14-slot week would be.
+    const week = await call("create_meal_plan", {
+      start_date: addDays(d0, 2),
+      days: 2,
+      slots: ["lunch", "dinner"],
+      meals: [
+        { date: addDays(d0, 2), slot: "lunch", label: "Chez les beaux-parents", eating_out: true },
+        { date: addDays(d0, 2), slot: "dinner", recipe_id: lieu.data.id, servings_planned: 2, note: "200 g de lieu" },
+        { date: addDays(d0, 3), slot: "lunch", leftovers_of: { date: addDays(d0, 2), slot: "dinner" } },
+        { date: addDays(d0, 3), slot: "dinner", label: "Salade au thon" },
+      ],
+    });
+    expect(week.isError).toBe(false);
+    expect(week.data.meals.map((m: { label: string | null; is_leftover: boolean; recipe_id: number | null }) => m.label ?? (m.is_leftover ? "restes" : m.recipe_id))).toEqual([
+      "Chez les beaux-parents",
+      lieu.data.id,
+      "restes",
+      "Salade au thon",
+    ]);
   });
 
   it("plans breakfasts", async () => {

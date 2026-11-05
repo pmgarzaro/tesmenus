@@ -22,7 +22,7 @@ import { createRecipeFromMcp, createRecipeShape } from "./recipes";
 import { createPlanFromMcp, createPlanShape, setMealShape, setPlannedMeal, shoppingListView } from "./planning";
 import { bodyEntryView, bodyLogView, logEntryView, mealLogView, plannedMeals, recipeView, searchRecipes, targetsView } from "./data";
 
-export const SERVER_INFO = { name: "tesmenus", version: "1.0.0" };
+export const SERVER_INFO = { name: "tesmenus", version: "1.3.0" };
 
 const INSTRUCTIONS = `Tes menus : planning de repas, recettes et journal alimentaire de l'utilisateur.
 Dates au format YYYY-MM-DD, fuseau Europe/Paris ; sans date, c'est aujourd'hui (${"<today>"}).
@@ -125,7 +125,7 @@ export function createMcpServer(owner: Owner): McpServer {
         "Crée un planning de repas (petit-déjeuner / midi / soir) pour le foyer. Sans `meals`, l'app tire les recettes elle-même " +
         "(alternance viande / poisson / végé, pas de répétition, restes du dîner le midi suivant ; petits-déjeuners parmi les recettes de type petit-dejeuner, " +
         "préparés pour plusieurs matins selon les réglages) en respectant les contraintes. " +
-        "Avec `meals`, place les recettes choisies, et complète le reste si fill_rest. " +
+        "Avec `meals`, place les repas choisis (recette, texte libre, restes, note), et complète le reste si fill_rest (sinon les autres repas restent vides). " +
         "Les plannings ne peuvent pas se chevaucher : par défaut il commence le lendemain du planning en cours. " +
         "Utiliser search_recipes pour trouver les recipe_id. À faire seulement à la demande de l'utilisateur.",
       inputSchema: createPlanShape,
@@ -139,8 +139,10 @@ export function createMcpServer(owner: Owner): McpServer {
     {
       title: "Changer un repas du planning",
       description:
-        "Modifie un repas (date + lunch/dinner) d'un planning existant : autre recette, repas extérieur, restes d'un repas précédent, " +
-        "vider, ou portions. Une seule action à la fois (servings peut accompagner recipe_id). Renvoie le planning à jour.",
+        "Modifie un repas (date + breakfast/lunch/dinner) d'un planning existant : recette, repas sans recette en texte libre (label, " +
+        "avec eating_out s'il est pris dehors), repas extérieur, restes d'un repas précédent, vider, portions, note. " +
+        "Une seule action à la fois ; servings et note peuvent l'accompagner. Le jour doit être couvert par un planning (sinon create_meal_plan). " +
+        "Renvoie le planning à jour.",
       inputSchema: setMealShape,
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
@@ -407,4 +409,10 @@ export function createMcpServer(owner: Owner): McpServer {
   );
 
   return server;
+}
+
+/** Names of the tools this build exposes (shown by /health to check a deployment). */
+export function toolNames(): string[] {
+  const server = createMcpServer({ userId: 0, householdId: 0 }) as unknown as { _registeredTools: Record<string, unknown> };
+  return Object.keys(server._registeredTools).sort();
 }

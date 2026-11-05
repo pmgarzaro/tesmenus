@@ -1,10 +1,11 @@
 import { BackLink } from "@/components/BackLink";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { MagnetTitle } from "@/components/MagnetTitle";
 import { ShoppingList } from "@/components/shopping/ShoppingList";
 import { requireUser } from "@/lib/auth";
 import { addDays, dateRange, longDate, shortDate, today } from "@/lib/planning/dates";
+import { listPlans } from "@/lib/planning/repo";
 import { getShoppingList } from "@/lib/shopping/repo";
 
 export const dynamic = "force-dynamic";
@@ -18,11 +19,26 @@ export default async function ShoppingPage({
 }) {
   const { householdId } = await requireUser();
   const { from, to } = await searchParams;
-  const list = getShoppingList(householdId, Number((await params).planId), from, to);
+  const planId = Number((await params).planId);
+  const plans = listPlans(householdId);
+  const current = plans.find((p) => p.id === planId);
+  if (!current) notFound();
+  // A trip starting in a later plan belongs to that plan's list.
+  const owner = from && from > addDays(current.startDate, current.days - 1)
+    ? plans.find((p) => p.startDate <= from && from <= addDays(p.startDate, p.days - 1))
+    : undefined;
+  if (owner) redirect(`/courses/${owner.id}?from=${from}&to=${to ?? from}`);
+
+  const list = getShoppingList(householdId, planId, from, to);
   if (!list) notFound();
-  const { plan, period } = list;
+  const { plan, period, maxEnd } = list;
   const end = addDays(plan.startDate, plan.days - 1);
-  const days = dateRange(plan.startDate, plan.days);
+  // Days of this plan and of the next ones, so a trip can cover the start of next week.
+  const days = dateRange(plan.startDate, 31).filter((d) => d <= maxEnd);
+  const later = plans
+    .filter((p) => p.startDate > plan.startDate)
+    .sort((a, b) => a.startDate.localeCompare(b.startDate))
+    .slice(0, 2);
   const whole = period.key === "";
   const t = today();
   const planPeriod = `du ${longDate(plan.startDate)} au ${longDate(end)}`;
@@ -53,6 +69,11 @@ export default async function ShoppingPage({
               À partir d&apos;aujourd&apos;hui
             </Link>
           )}
+          {later.map((p) => (
+            <Link key={p.id} href={`/courses/${p.id}`} className={chip(false)}>
+              Semaine du {longDate(p.startDate)}
+            </Link>
+          ))}
         </div>
         <form key={period.key} className="grid grid-cols-[1fr_1fr_auto] items-end gap-2">
           <label className="text-xs text-stone-500">
@@ -79,6 +100,7 @@ export default async function ShoppingPage({
         </form>
         {!whole && (
           <p className="text-xs text-stone-500">
+            {period.to > end && "Inclut les repas du planning suivant. "}
             Les restes comptent le jour où le plat est cuisiné. Cette liste a ses propres cases cochées.
           </p>
         )}

@@ -78,6 +78,13 @@
       "when": 1793905406383,
       "tag": "0010_shopping_period",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1793908480356,
+      "tag": "0011_plan_label_note",
+      "breakpoints": true
     }
   ]
 }

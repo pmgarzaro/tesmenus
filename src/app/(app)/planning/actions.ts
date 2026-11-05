@@ -100,7 +100,9 @@ export type CellAction =
   | { type: "leftover"; sourceId: number }
   | { type: "servings"; servings: number }
   | { type: "reroll" }
-  | { type: "swap"; otherId: number };
+  | { type: "swap"; otherId: number }
+  | { type: "label"; label: string; eatingOut: boolean }
+  | { type: "note"; note: string };
 
 const ERRORS: Record<CellAction["type"], string> = {
   recipe: "Recette introuvable.",
@@ -109,7 +111,9 @@ const ERRORS: Record<CellAction["type"], string> = {
   leftover: "Ces restes ne peuvent venir que d'un repas cuisiné avant.",
   servings: "Nombre de portions invalide.",
   reroll: "Aucune autre recette ne convient.",
-  swap: "Les repas « restes » ne s'échangent pas.",
+  swap: "Ces deux repas ne s'échangent pas.",
+  label: "Texte vide.",
+  note: "Modification impossible.",
 };
 
 export async function editCell(planId: number, entryId: number, action: CellAction): Promise<string | null> {
@@ -117,12 +121,14 @@ export async function editCell(planId: number, entryId: number, action: CellActi
   const ok = (() => {
     switch (action.type) {
       case "recipe": return plans.setEntryRecipe(h, entryId, action.recipeId);
-      case "empty": return plans.setEntryRecipe(h, entryId, null);
+      case "empty": return plans.clearEntry(h, entryId);
       case "out": return plans.setEatingOut(h, entryId);
       case "leftover": return plans.setLeftover(h, entryId, action.sourceId);
       case "servings": return plans.setServings(h, entryId, action.servings);
       case "reroll": return plans.rerollEntry(h, entryId);
       case "swap": return plans.swapEntries(h, entryId, action.otherId);
+      case "label": return plans.setEntryLabel(h, entryId, action.label, action.eatingOut);
+      case "note": return plans.setEntryNote(h, entryId, action.note);
     }
   })();
   revalidatePath(`/planning/${planId}`);

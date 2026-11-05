@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lte } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { fold, guessAisle, parseIngredientLine } from "@/lib/recipes/normalize";
 import { addDays, isValidDate } from "@/lib/planning/dates";
@@ -15,15 +15,65 @@ export type Period = { from: string; to: string; key: string };
  * The period of a plan to shop for, clamped to the plan's dates. Missing or
  * invalid dates mean the whole plan (key "").
  */
-export function resolvePeriod(plan: { startDate: string; days: number }, from?: string | null, to?: string | null): Period {
+export function resolvePeriod(
+  plan: { startDate: string; days: number },
+  from?: string | null,
+  to?: string | null,
+  /** Last date the period may reach: the end of a later plan (one trip for the end of a week and the start of the next). */
+  maxEnd?: string,
+): Period {
   const start = plan.startDate;
   const end = addDays(start, plan.days - 1);
+  const limit = maxEnd && maxEnd > end ? (maxEnd < addDays(start, MAX_PERIOD_DAYS - 1) ? maxEnd : addDays(start, MAX_PERIOD_DAYS - 1)) : end;
   const clamp = (d: string | null | undefined, fallback: string) =>
-    d && isValidDate(d) ? (d < start ? start : d > end ? end : d) : fallback;
+    d && isValidDate(d) ? (d < start ? start : d > limit ? limit : d) : fallback;
   let f = clamp(from, start);
   let t = clamp(to, end);
   if (t < f) [f, t] = [t, f];
   return { from: f, to: t, key: f === start && t === end ? "" : `${f}_${t}` };
+}
+
+/** A shopping period may cover a plan and the following ones, up to this many days. */
+export const MAX_PERIOD_DAYS = 31;
+
+/**
+ * Planned meals of the household between two dates, whatever their plan
+ * (the most recent plan wins if two cover the same meal).
+ */
+export function entriesBetween(householdId: number, from: string, to: string) {
+  const rows = getDb()
+    .select({ entry: schema.mealPlanEntries })
+    .from(schema.mealPlanEntries)
+    .innerJoin(schema.mealPlans, eq(schema.mealPlans.id, schema.mealPlanEntries.planId))
+    .where(
+      and(
+        eq(schema.mealPlans.householdId, householdId),
+        gte(schema.mealPlanEntries.date, from),
+        lte(schema.mealPlanEntries.date, to),
+      ),
+    )
+    .orderBy(desc(schema.mealPlans.id))
+    .all();
+  const seen = new Set<string>();
+  return rows
+    .map((r) => r.entry)
+    .filter((e) => {
+      const k = `${e.date}|${e.slot}`;
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+}
+
+/** End of the household's last plan starting after this one (or this plan's end). */
+export function lastPlanEnd(householdId: number, plan: { startDate: string; days: number }): string {
+  const ends = getDb()
+    .select({ startDate: schema.mealPlans.startDate, days: schema.mealPlans.days })
+    .from(schema.mealPlans)
+    .where(and(eq(schema.mealPlans.householdId, householdId), gte(schema.mealPlans.startDate, plan.startDate)))
+    .all()
+    .map((p) => addDays(p.startDate, p.days - 1));
+  return ends.reduce((a, b) => (b > a ? b : a), addDays(plan.startDate, plan.days - 1));
 }
 
 /** Period from its stored key, for a given plan. */
@@ -111,12 +161,17 @@ const inList = (planId: number, period: string) =>
 export function getShoppingList(householdId: number, planId: number, from?: string | null, to?: string | null) {
   const plan = ownedPlan(householdId, planId);
   if (!plan) return null;
-  const period = resolvePeriod(plan, from, to);
+  const maxEnd = lastPlanEnd(householdId, plan);
+  const period = resolvePeriod(plan, from, to, maxEnd);
+  const planEnd = addDays(plan.startDate, plan.days - 1);
   const rows = getDb().select().from(schema.shoppingListItems).where(inList(planId, period.key)).all();
   const state = new Map(rows.filter((r) => !r.manual && r.ingredientId).map((r) => [r.ingredientId!, r]));
   const pantry = new Set(getSettings(householdId).pantry.map(fold));
 
-  const items: ListItem[] = aggregate(needLines(planId, period.from, period.to)).map((i) => ({
+  // Beyond this plan, the meals of the next plans count too (one trip for both weeks).
+  const lines =
+    period.to > planEnd ? linesOf(entriesBetween(householdId, period.from, period.to)) : needLines(planId, period.from, period.to);
+  const items: ListItem[] = aggregate(lines).map((i) => ({
     ...i,
     amount: formatItemAmounts(i),
     checked: state.get(i.ingredientId)?.checked ?? false,
@@ -126,7 +181,7 @@ export function getShoppingList(householdId: number, planId: number, from?: stri
   const manual: ManualItem[] = rows
     .filter((r) => r.manual)
     .map((r) => ({ id: r.id, label: r.freeLabel ?? "", aisle: r.aisle ?? "autre", checked: r.checked }));
-  return { plan, period, items, manual };
+  return { plan, period, maxEnd, items, manual };
 }
 
 export type ShoppingList = NonNullable<ReturnType<typeof getShoppingList>>;

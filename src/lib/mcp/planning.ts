@@ -1,6 +1,6 @@
 // Meal plans and shopping lists for Claude: create a plan, change a meal,
 // list what to buy for a period. Built on the app's planning and shopping code.
-import { and, desc, eq, gte, lte } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { getDb, schema } from "@/db";
 import { dateSchema } from "@/lib/journal/input";
@@ -11,7 +11,7 @@ import * as plans from "@/lib/planning/repo";
 import { fold, normalizeTags } from "@/lib/recipes/normalize";
 import { getSettings } from "@/lib/settings";
 import { AISLE_ORDER, aggregate, formatItemAmounts } from "@/lib/shopping/aggregate";
-import { linesOf } from "@/lib/shopping/repo";
+import { entriesBetween, linesOf } from "@/lib/shopping/repo";
 
 const TO_APP = { breakfast: "matin", lunch: "midi", dinner: "soir" } as const;
 const TO_API = { matin: "breakfast", midi: "lunch", soir: "dinner" } as const;
@@ -41,6 +41,8 @@ export function planView(owner: Owner, planId: number, warnings: string[] = []) 
       is_leftover: e.isLeftover,
       leftover_of: e.source ? { date: e.source.date, slot: TO_API[e.source.slot] } : null,
       is_eating_out: e.isEatingOut,
+      label: e.label,
+      note: e.note,
     })),
     warnings,
   };
@@ -81,8 +83,12 @@ const mealShape = z.object({
   date: dateSchema,
   slot: slotSchema,
   recipe_id: z.number().int().positive().optional().describe("Recette à cuisiner"),
-  eating_out: z.boolean().optional().describe("Repas à l'extérieur (rien à cuisiner)"),
+  label: z.string().min(1).max(120).optional().describe("Repas sans recette, en texte libre : « raclette », « McDo », « chez les beaux-parents »"),
+  eating_out: z.boolean().optional().describe("Repas pris dehors (seul, ou avec label)"),
+  leftovers_of: z.object({ date: dateSchema, slot: slotSchema }).optional().describe("Restes d'un repas cuisiné plus tôt dans ce planning"),
   servings: z.number().int().min(1).max(50).optional().describe("Portions à cuisiner (sinon : réglages du foyer)"),
+  servings_planned: z.number().int().min(1).max(50).optional().describe("Synonyme de servings"),
+  note: z.string().max(300).optional().describe("Consigne pour ce repas : « 200 g de lieu et de pommes de terre »"),
 });
 
 export const createPlanShape = {
@@ -123,7 +129,10 @@ export function createPlanFromMcp(owner: Owner, a: CreateArgs) {
   for (const m of meals) {
     if (!dates.has(m.date)) throw new JournalError(`Le repas du ${m.date} est hors du planning (${startDate} + ${days} jours)`);
     if (!slots.includes(TO_APP[m.slot])) throw new JournalError(`Le créneau ${m.slot} n'est pas dans ce planning`);
-    if (!m.recipe_id === !m.eating_out) throw new JournalError(`Repas du ${m.date} ${m.slot} : donner recipe_id OU eating_out`);
+    const kinds = [!!m.recipe_id, !!m.label || !!m.eating_out, !!m.leftovers_of].filter(Boolean).length;
+    if (kinds !== 1 && !(kinds === 0 && m.note)) {
+      throw new JournalError(`Repas du ${m.date} ${m.slot} : donner recipe_id, OU label / eating_out, OU leftovers_of`);
+    }
     if (m.recipe_id) assertRecipe(owner, m.recipe_id);
   }
   for (const id of a.include_recipe_ids ?? []) assertRecipe(owner, id);
@@ -144,10 +153,21 @@ export function createPlanFromMcp(owner: Owner, a: CreateArgs) {
   const ordered = [...meals].sort((x, y) => rank[x.slot] - rank[y.slot] || x.date.localeCompare(y.date));
   for (const m of ordered) {
     const e = cell(m.date, m.slot);
-    if (m.eating_out) plans.setEatingOut(h, e.id);
-    else plans.setEntryRecipe(h, e.id, m.recipe_id!);
+    if (m.label) plans.setEntryLabel(h, e.id, m.label, m.eating_out ?? false);
+    else if (m.eating_out) plans.setEatingOut(h, e.id);
+    else if (m.recipe_id) plans.setEntryRecipe(h, e.id, m.recipe_id);
   }
-  for (const m of meals) if (m.servings && m.recipe_id) plans.setServings(h, cell(m.date, m.slot).id, m.servings);
+  // Leftovers once every cooked meal is in place.
+  for (const m of meals) {
+    if (!m.leftovers_of) continue;
+    const ok = plans.setLeftover(h, cell(m.date, m.slot).id, cell(m.leftovers_of.date, m.leftovers_of.slot).id);
+    if (!ok) throw new JournalError(`Restes impossibles pour le ${m.date} ${m.slot} : le repas source doit être cuisiné, plus tôt et du même type`);
+  }
+  for (const m of meals) {
+    const servings = m.servings ?? m.servings_planned;
+    if (servings && m.recipe_id) plans.setServings(h, cell(m.date, m.slot).id, servings);
+    if (m.note) plans.setEntryNote(h, cell(m.date, m.slot).id, m.note);
+  }
   const more = meals.length && fillRest ? (plans.fillEmptyEntries(h, id) ?? []) : [];
   return planView(owner, id, [...new Set([...warnings, ...more])]);
 }
@@ -161,8 +181,11 @@ export const setMealShape = {
   recipe_id: z.number().int().positive().optional().describe("Cuisiner cette recette"),
   eating_out: z.boolean().optional().describe("true : repas à l'extérieur"),
   leftovers_of: z.object({ date: dateSchema, slot: slotSchema }).optional().describe("Manger les restes de ce repas (même planning, avant)"),
-  clear: z.boolean().optional().describe("true : vider le repas"),
+  label: z.string().min(1).max(120).optional().describe("Repas sans recette, en texte libre (avec eating_out: true s'il est pris dehors)"),
+  clear: z.boolean().optional().describe("true : vider le repas (recette, texte et note)"),
   servings: z.number().int().min(1).max(50).optional().describe("Portions à cuisiner (seul ou avec recipe_id)"),
+  servings_planned: z.number().int().min(1).max(50).optional().describe("Synonyme de servings"),
+  note: z.string().max(300).nullable().optional().describe("Consigne pour ce repas, cumulable avec une autre action ; null l'efface"),
 };
 
 type SetArgs = z.infer<z.ZodObject<typeof setMealShape>>;
@@ -170,16 +193,21 @@ type SetArgs = z.infer<z.ZodObject<typeof setMealShape>>;
 export function setPlannedMeal(owner: Owner, a: SetArgs) {
   const h = owner.householdId;
   const e = entryAt(owner, a.date, a.slot);
-  const actions = [a.recipe_id !== undefined, !!a.eating_out, !!a.leftovers_of, !!a.clear].filter(Boolean).length;
-  if (actions > 1) throw new JournalError("Une seule action à la fois : recipe_id, eating_out, leftovers_of ou clear");
-  if (actions === 0 && a.servings === undefined) throw new JournalError("Rien à changer : donner recipe_id, eating_out, leftovers_of, clear ou servings");
-  if (a.recipe_id !== undefined) {
+  const servings = a.servings ?? a.servings_planned;
+  const actions = [a.recipe_id !== undefined, !!a.eating_out || !!a.label, !!a.leftovers_of, !!a.clear].filter(Boolean).length;
+  if (actions > 1) throw new JournalError("Une seule action à la fois : recipe_id, label / eating_out, leftovers_of ou clear");
+  if (actions === 0 && servings === undefined && a.note === undefined) {
+    throw new JournalError("Rien à changer : donner recipe_id, label, eating_out, leftovers_of, clear, servings ou note");
+  }
+  if (a.label) {
+    plans.setEntryLabel(h, e.id, a.label, a.eating_out ?? false);
+  } else if (a.recipe_id !== undefined) {
     assertRecipe(owner, a.recipe_id);
     plans.setEntryRecipe(h, e.id, a.recipe_id);
   } else if (a.eating_out) {
     plans.setEatingOut(h, e.id);
   } else if (a.clear) {
-    plans.setEntryRecipe(h, e.id, null);
+    plans.clearEntry(h, e.id);
   } else if (a.leftovers_of) {
     const source = entryAt(owner, a.leftovers_of.date, a.leftovers_of.slot);
     if (!plans.setLeftover(h, e.id, source.id)) {
@@ -188,9 +216,10 @@ export function setPlannedMeal(owner: Owner, a: SetArgs) {
       );
     }
   }
-  if (a.servings !== undefined && !plans.setServings(h, e.id, a.servings)) {
+  if (servings !== undefined && !plans.setServings(h, e.id, servings)) {
     throw new JournalError("Portions modifiables seulement sur un repas cuisiné");
   }
+  if (a.note !== undefined) plans.setEntryNote(h, e.id, a.note);
   return planView(owner, e.planId);
 }
 
@@ -200,28 +229,7 @@ export function setPlannedMeal(owner: Owner, a: SetArgs) {
 export function shoppingListView(owner: Owner, from: string, to: string) {
   if (to < from) throw new JournalError("date_to doit être postérieure ou égale à date_from");
   if (addDays(from, 30) < to) throw new JournalError("Période trop longue : 31 jours maximum");
-  const rows = getDb()
-    .select({ entry: schema.mealPlanEntries, planId: schema.mealPlans.id })
-    .from(schema.mealPlanEntries)
-    .innerJoin(schema.mealPlans, eq(schema.mealPlans.id, schema.mealPlanEntries.planId))
-    .where(
-      and(
-        eq(schema.mealPlans.householdId, owner.householdId),
-        gte(schema.mealPlanEntries.date, from),
-        lte(schema.mealPlanEntries.date, to),
-      ),
-    )
-    .orderBy(desc(schema.mealPlans.id))
-    .all();
-  const seen = new Set<string>();
-  const entries = rows
-    .filter(({ entry }) => {
-      const k = `${entry.date}|${entry.slot}`;
-      if (seen.has(k)) return false;
-      seen.add(k);
-      return true;
-    })
-    .map((r) => r.entry);
+  const entries = entriesBetween(owner.householdId, from, to);
   const lines = linesOf(entries);
   const pantry = new Set(getSettings(owner.householdId).pantry.map(fold));
   const items = aggregate(lines);

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeftRight, BookOpen, Dices, Eye, Repeat2, Trash2, UtensilsCrossed } from "lucide-react";
+import { ArrowLeftRight, BookOpen, Dices, Eye, NotebookPen, PenLine, Repeat2, Trash2, UtensilsCrossed } from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { type CellAction, editCell } from "@/app/(app)/planning/actions";
@@ -18,6 +18,8 @@ export type GridEntry = {
   servings: number | null;
   isLeftover: boolean;
   isEatingOut: boolean;
+  label: string | null;
+  note: string | null;
   hasLeftovers: boolean;
   recipe: { id: number; title: string; tags: string[]; minutes: number } | null;
   source: { id: number; date: string; slot: Slot } | null;
@@ -104,7 +106,7 @@ export function PlanGrid({ planId, entries, recipes, today }: { planId: number; 
 
       {selected && (
         <CellSheet
-          key={`${selected.id}-${selected.recipeId}-${selected.servings}`}
+          key={`${selected.id}-${selected.recipeId}-${selected.servings}-${selected.label}-${selected.note}`}
           entry={selected}
           entries={entries}
           recipes={recipes}
@@ -123,6 +125,23 @@ export function PlanGrid({ planId, entries, recipes, today }: { planId: number; 
 }
 
 function Cell({ e }: { e: GridEntry }) {
+  return (
+    <span className="min-w-0 flex-1">
+      <CellContent e={e} />
+      {e.note && <span className="mt-0.5 block text-xs italic text-stone-500">📝 {e.note}</span>}
+    </span>
+  );
+}
+
+function CellContent({ e }: { e: GridEntry }) {
+  if (e.label) {
+    return (
+      <span className="flex min-w-0 items-center gap-1.5 text-stone-700">
+        {e.isEatingOut ? <UtensilsCrossed className="size-4 shrink-0" aria-hidden /> : <PenLine className="size-4 shrink-0" aria-hidden />}
+        <span className="truncate font-medium">{e.label}</span>
+      </span>
+    );
+  }
   if (e.isEatingOut) {
     return (
       <span className="inline-flex items-center gap-1.5 text-stone-500">
@@ -141,7 +160,7 @@ function Cell({ e }: { e: GridEntry }) {
       </span>
     );
   }
-  if (!e.recipe) return <span className="flex-1 rounded-xl border-2 border-dashed border-stone-300 px-3 py-1.5 text-stone-500">+ Choisir une recette</span>;
+  if (!e.recipe) return <span className="block rounded-xl border-2 border-dashed border-stone-300 px-3 py-1.5 text-stone-500">+ Choisir une recette</span>;
   return (
     <span className="min-w-0">
       <span className="block truncate font-bold">{e.recipe.title}</span>
@@ -172,7 +191,10 @@ function CellSheet({
   onSwap: () => void;
 }) {
   // An empty meal opens straight on the recipe list.
-  const [picking, setPicking] = useState(!e.recipe && !e.isEatingOut);
+  const [picking, setPicking] = useState(!e.recipe && !e.isEatingOut && !e.label);
+  const [label, setLabel] = useState(e.label ?? "");
+  const [labelOut, setLabelOut] = useState(e.isEatingOut);
+  const [note, setNote] = useState(e.note ?? "");
   const [query, setQuery] = useState("");
   const [servings, setServings] = useState(e.servings ?? 2);
   const cooks = !e.isLeftover && !e.isEatingOut && e.recipe;
@@ -199,7 +221,7 @@ function CellSheet({
       >
         <p className="text-sm text-stone-500">{capitalize(when(e))}</p>
         <h2 className="mb-3 text-lg font-semibold">
-          {e.isEatingOut ? "Repas extérieur" : e.recipe ? (e.isLeftover ? `Restes : ${e.recipe.title}` : e.recipe.title) : "Rien de prévu"}
+          {e.label ?? (e.isEatingOut ? "Repas extérieur" : e.recipe ? (e.isLeftover ? `Restes : ${e.recipe.title}` : e.recipe.title) : "Rien de prévu")}
         </h2>
         {error && <p className="mb-3 rounded-xl bg-red-50 p-2 text-sm text-red-700">{error}</p>}
 
@@ -228,7 +250,7 @@ function CellSheet({
               {shown.length === 0 && <li className="py-3 text-center text-sm text-stone-500">Aucune recette.</li>}
             </ul>
             <button onClick={() => setPicking(false)} className="w-full py-2 text-stone-500">
-              {e.recipe || e.isEatingOut ? "Retour" : "Autres options (hasard, restes, repas extérieur…)"}
+              {e.recipe || e.isEatingOut || e.label ? "Retour" : "Autres options (hasard, restes, texte libre, note…)"}
             </button>
           </div>
         ) : (
@@ -266,12 +288,62 @@ function CellSheet({
                 <Repeat2 className={ico} aria-hidden /> Restes du {when(s)} ({s.recipe?.title})
               </button>
             ))}
-            {!e.isEatingOut && (
+            {(!e.isEatingOut || e.label) && (
               <button className={btn} disabled={pending} onClick={() => onAction({ type: "out" })}>
                 <UtensilsCrossed className={ico} aria-hidden /> Repas extérieur
               </button>
             )}
-            {(e.recipe || e.isEatingOut) && (
+            <form
+              className="space-y-2 rounded-xl border border-stone-200 p-3"
+              onSubmit={(ev) => {
+                ev.preventDefault();
+                if (label.trim()) onAction({ type: "label", label, eatingOut: labelOut });
+              }}
+            >
+              <label className="flex items-center gap-2 text-sm font-medium">
+                <PenLine className={ico} aria-hidden /> Sans recette
+              </label>
+              <input
+                value={label}
+                onChange={(ev) => setLabel(ev.target.value)}
+                maxLength={120}
+                placeholder="Raclette, salade au thon, chez les beaux-parents…"
+                className="w-full rounded-lg border border-stone-300 px-3 py-2"
+              />
+              <div className="flex items-center justify-between gap-2">
+                <label className="flex items-center gap-1.5 text-sm text-stone-600">
+                  <input type="checkbox" checked={labelOut} onChange={(ev) => setLabelOut(ev.target.checked)} className="size-4 accent-brand-600" />
+                  Pas à la maison
+                </label>
+                <button disabled={pending || !label.trim()} className="rounded-lg bg-stone-800 px-3 py-1.5 text-sm text-white disabled:opacity-40">
+                  OK
+                </button>
+              </div>
+            </form>
+            <form
+              className="space-y-2 rounded-xl border border-stone-200 p-3"
+              onSubmit={(ev) => {
+                ev.preventDefault();
+                onAction({ type: "note", note }, false);
+              }}
+            >
+              <label className="flex items-center gap-2 text-sm font-medium">
+                <NotebookPen className={ico} aria-hidden /> Note pour ce repas
+              </label>
+              <div className="flex gap-2">
+                <input
+                  value={note}
+                  onChange={(ev) => setNote(ev.target.value)}
+                  maxLength={300}
+                  placeholder="200 g de lieu et de pommes de terre…"
+                  className="min-w-0 flex-1 rounded-lg border border-stone-300 px-3 py-2"
+                />
+                <button disabled={pending || note === (e.note ?? "")} className="rounded-lg bg-stone-800 px-3 py-1.5 text-sm text-white disabled:opacity-40">
+                  OK
+                </button>
+              </div>
+            </form>
+            {(e.recipe || e.isEatingOut || e.label || e.note) && (
               <button className={btn} disabled={pending} onClick={() => onAction({ type: "empty" })}>
                 <Trash2 className={ico} aria-hidden /> Vider
               </button>

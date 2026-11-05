@@ -236,3 +236,45 @@ describe("breakfast in plans", () => {
     expect(plans.getPlan(e, id)!.entries.find((x) => x.id === m[1].id)!.isLeftover).toBe(true);
   });
 });
+
+describe("free-text meals and notes", () => {
+  it("keeps them through fill, swap and templates", async () => {
+    const { saveTemplate, createPlanFromTemplate } = await import("./templates");
+    const f = getDb().insert(schema.households).values({ name: "F" }).returning().get().id;
+    seedIfEmpty(f);
+    const { id } = plans.createPlan(f, { startDate: "2027-01-04", days: 2, slots: ["midi", "soir"], constraints: {}, mode: "manual" });
+    const cells = plans.getPlan(f, id)!.entries;
+    const [l0, d0, l1, d1] = cells;
+    expect(plans.setEntryLabel(f, l0.id, "  Raclette ")).toBe(true);
+    expect(plans.setEntryLabel(f, d1.id, "Chez les beaux-parents", true)).toBe(true);
+    expect(plans.setEntryLabel(f, d1.id, "   ")).toBe(false);
+    plans.setEntryNote(f, d0.id, "200 g de lieu");
+
+    plans.fillEmptyEntries(f, id);
+    let p = plans.getPlan(f, id)!;
+    const at = (x: { id: number }) => p.entries.find((e) => e.id === x.id)!;
+    expect(at(l0)).toMatchObject({ label: "Raclette", recipeId: null, isEatingOut: false });
+    expect(at(d1)).toMatchObject({ label: "Chez les beaux-parents", isEatingOut: true });
+    expect(at(d0)).toMatchObject({ note: "200 g de lieu" });
+    expect(at(d0).recipeId).not.toBeNull(); // filled, note kept
+    expect(at(l1).isLeftover || at(l1).recipeId !== null).toBe(true);
+
+    // A recipe replaces the text; swap carries text and note.
+    plans.swapEntries(f, l0.id, d0.id);
+    p = plans.getPlan(f, id)!;
+    expect(at(d0)).toMatchObject({ label: "Raclette", recipeId: null, note: null });
+    expect(at(l0)).toMatchObject({ label: null, note: "200 g de lieu" });
+
+    // Templates remember both.
+    const tpl = saveTemplate(f, id, "Semaine type")!;
+    const copy = createPlanFromTemplate(f, tpl, "2027-02-01")!;
+    const c = plans.getPlan(f, copy.id)!.entries;
+    expect(c[1]).toMatchObject({ label: "Raclette" });
+    expect(c[0]).toMatchObject({ note: "200 g de lieu" });
+    expect(c[3]).toMatchObject({ label: "Chez les beaux-parents", isEatingOut: true });
+
+    // Clearing removes everything.
+    plans.clearEntry(f, d0.id);
+    expect(plans.getPlan(f, id)!.entries.find((e) => e.id === d0.id)).toMatchObject({ label: null, note: null, recipeId: null });
+  });
+});

@@ -44,6 +44,9 @@ export type PlannedMeal = {
   is_leftover: boolean;
   leftover_of: { date: string; slot: "breakfast" | "lunch" | "dinner" } | null;
   is_eating_out: boolean;
+  /** Meal without a recipe, in free text. */
+  label: string | null;
+  note: string | null;
 };
 
 export function plannedMeals(owner: Owner, date: string) {
@@ -74,7 +77,7 @@ export function plannedMeals(owner: Owner, date: string) {
           .where(and(eq(schema.recipes.id, recipeId), eq(schema.recipes.householdId, owner.householdId)))
           .get()
       : undefined;
-    if (!recipe && !e.isEatingOut) continue; // empty cell
+    if (!recipe && !e.isEatingOut && !e.label && !e.note) continue; // empty cell
     meals.push({
       slot: PLAN_SLOTS[slot],
       recipe_id: recipe ? recipeId : null,
@@ -83,6 +86,8 @@ export function plannedMeals(owner: Owner, date: string) {
       is_leftover: e.isLeftover,
       leftover_of: source ? { date: source.date, slot: PLAN_SLOTS[source.slot] } : null,
       is_eating_out: e.isEatingOut,
+      label: e.label,
+      note: e.note,
     });
   }
   return { date, people_in_household: getSettings(owner.householdId).people, meals };

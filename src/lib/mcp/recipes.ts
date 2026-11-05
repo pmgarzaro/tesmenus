@@ -71,6 +71,13 @@ export const createRecipeShape = {
   meal_type: z.enum(MEAL_TYPES).optional().describe("entree | plat | dessert | autre | petit-dejeuner (plat par défaut ; plat et autre vont au déjeuner / dîner, petit-dejeuner au petit-déjeuner du planning)"),
   tags: z.array(z.string().min(1).max(40)).max(30).optional().describe("Ex. viande, poisson, végé, rapide… (sert à l'alternance du planning)"),
   prep_min: z.number().int().min(0).max(1440).nullable().optional(),
+  marinade_min: z
+    .number()
+    .int()
+    .min(1)
+    .max(2880)
+    .optional()
+    .describe("Temps de marinade : ajouté comme étape de repos (sauf si une étape de type repos le décrit déjà)"),
   cook_min: z.number().int().min(0).max(2880).nullable().optional(),
   description: z.string().max(2000).nullable().optional(),
   notes: z.string().max(5000).nullable().optional(),
@@ -81,6 +88,17 @@ export const createRecipeShape = {
 };
 
 type Args = z.infer<z.ZodObject<typeof createRecipeShape>>;
+
+type Step = RecipeInput["steps"][number];
+
+/** Marinade as a resting step (the batch-cooking planner schedules it), unless one already says so. */
+function withMarinade(a: Args, steps: Step[]): Step[] {
+  if (!a.marinade_min || steps.some((s) => s.type === "repos" && /marin/i.test(s.text) && s.durationMinutes)) return steps;
+  const step: Step = { text: `Laisser mariner ${a.marinade_min} min.`, durationMinutes: a.marinade_min, type: "repos", equipment: null, temperature: null };
+  // After the step that prepares the marinade if there is one, else first.
+  const i = steps.findIndex((s) => /marin/i.test(s.text));
+  return i >= 0 ? [...steps.slice(0, i + 1), step, ...steps.slice(i + 1)] : [step, ...steps];
+}
 
 export function toRecipeInput(a: Args): RecipeInput {
   const input = {
@@ -105,7 +123,7 @@ export function toRecipeInput(a: Args): RecipeInput {
         optional: i.optional ?? false,
       };
     }),
-    steps: (a.steps ?? []).map((s) => {
+    steps: withMarinade(a, (a.steps ?? []).map((s) => {
       const step = typeof s === "string" ? { text: s } : s;
       const guess = guessStep(step.text);
       return {
@@ -115,7 +133,7 @@ export function toRecipeInput(a: Args): RecipeInput {
         equipment: step.equipment !== undefined ? step.equipment : guess.equipment,
         temperature: step.temperature !== undefined ? step.temperature : guess.temperature,
       };
-    }),
+    })),
   };
   return recipeInputSchema.parse(input);
 }
