@@ -208,3 +208,26 @@ describe("breakfast", () => {
     expect(p.entries.filter((e) => e.slot === "soir").every((e) => e.recipeId !== null)).toBe(true);
   });
 });
+
+describe("stock to use up", () => {
+  const withIngredients = LIBRARY.map((r) =>
+    r.id === 8 ? { ...r, ingredientNames: ["courgette", "crème fraîche épaisse"] } : r.id === 4 ? { ...r, ingredientNames: ["cabillaud", "citron"] } : r,
+  );
+
+  it("cooks the recipes using expiring stock before its date, whatever the seed", () => {
+    for (let seed = 1; seed <= 20; seed++) {
+      const plan = generatePlan(
+        { ...BASE, seed, stock: [{ name: "Crème fraîche", expiresOn: "2026-10-06" }, { name: "Cabillaud", expiresOn: "2026-10-05" }] },
+        withIngredients,
+      );
+      const day = (id: number) => cooked(plan).find((e) => e.recipeId === id)?.date;
+      expect(day(4)).toBe("2026-10-05");
+      expect(day(8)! <= "2026-10-06").toBe(true);
+    }
+  });
+
+  it("ignores stock whose date has passed on that day", () => {
+    const plan = generatePlan({ ...BASE, seed: 3, stock: [{ name: "Lait de coco", expiresOn: "2026-10-05" }] }, withIngredients);
+    expect(cooked(plan)).toHaveLength(6);
+  });
+});

@@ -26,7 +26,7 @@ Tout fonctionne **sans API payante**. Une IA (Google Gemini, utilisable avec sa 
 
 ## Planning
 
-- **Génération** (code déterministe, sans IA) : le soir on cuisine pour plusieurs repas (réglage « portions par recette ») et le midi suivant mange les restes ; le premier midi est cuisiné pour le foyer. Pas de recette répétée sur la période, celles de la semaine précédente évitées, alternance viande / poisson / végé (d'après les tags), préférence pour les recettes qui partagent des ingrédients. Plusieurs tirages sont comparés et le meilleur est gardé.
+- **Génération** (code déterministe, sans IA) : priorité aux recettes qui finissent le stock avant sa date ; le soir on cuisine pour plusieurs repas (réglage « portions par recette ») et le midi suivant mange les restes ; le premier midi est cuisiné pour le foyer. Pas de recette répétée sur la période, celles de la semaine précédente évitées, alternance viande / poisson / végé (d'après les tags), préférence pour les recettes qui partagent des ingrédients. Plusieurs tirages sont comparés et le meilleur est gardé.
 - **Deux modes** à la création : *Automatique*, ou *Je remplis moi-même* (planning vide). En remplissant à la main, un dîner couvre automatiquement le midi suivant s'il est libre ; « Compléter les repas vides au hasard » ne remplit que les cases restantes. Depuis une fiche recette, « Ajouter au planning » la place sur un repas.
 - **Contraintes** à la création : temps maximum par jour, recettes à inclure, uniquement des plats congelables, tags à éviter.
 - **Édition** d'un repas : autre recette au hasard, choix dans la bibliothèque, échange avec un autre repas, restes d'un repas précédent, repas extérieur, portions ; « Tout relancer » pour la semaine entière.
@@ -49,6 +49,8 @@ Tout fonctionne **sans API payante**. Une IA (Google Gemini, utilisable avec sa 
 - Trié par date et regroupé : **Date dépassée** (au frigo : à jeter ; au placard ou au congélateur, souvent une date de durabilité minimale, à vérifier), **À manger vite** (moins de 3 jours), *Plus tard*, *Sans date*. Filtre par emplacement.
 - ✓ quand un article est fini, poubelle (ou « Tout jeter ») pour les dates dépassées ; toucher un article pour le modifier (quantité restante, date, note).
 - **Que cuisiner ?** ouvre le vide-frigo pré-rempli avec le stock encore bon ; le vide-frigo propose aussi « + Tout mon stock ».
+- **Liste de courses** : un ingrédient présent en stock en quantité suffisante reste affiché, barré, avec « Déjà en stock » ; s'il en manque, seule la différence est à acheter (« 200 g », il en faut 700 g en tout). Unités converties (g/kg, ml/cl/l, cuillères pour beurre, sucre…). Si la quantité en stock ne peut pas être comparée (« un fond », boîtes contre grammes, pas de quantité), la ligne reste à acheter avec un rappel « vérifie s'il en reste assez ». Les articles à la date dépassée ne comptent pas. Correspondance des noms prudente : « yaourts nature » ↔ « yaourt », mais pas « lait de coco » ↔ « lait ».
+- **Tirage automatique du planning** : les recettes qui utilisent un article du stock dont la date tombe pendant le planning sont favorisées, et placées avant cette date (d'autant plus tôt qu'elle est proche).
 
 ## Batch cooking
 
