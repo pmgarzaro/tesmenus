@@ -192,6 +192,10 @@ describe("MCP tools", () => {
         "delete_body_measurement",
         "set_nutrition_targets",
         "update_meal_log",
+        "get_stock",
+        "add_stock_items",
+        "update_stock_item",
+        "remove_stock_items",
       ].sort(),
     );
   });
@@ -514,6 +518,37 @@ describe("MCP tools", () => {
     expect(await call("delete_body_measurement", { date: t })).toMatchObject({ isError: true });
     expect(await call("log_body_measurement", { weight_kg: 1000 })).toMatchObject({ isError: true });
     expect(await call("log_body_measurement", {})).toMatchObject({ isError: true, text: expect.stringMatching(/au moins une mesure/) });
+  });
+
+  it("keeps the household stock", async () => {
+    const { addDays } = await import("@/lib/planning/dates");
+    const t = today();
+    const added = await call("add_stock_items", {
+      items: [
+        { name: "Pâtes", location: "placard" },
+        { name: "Crème fraîche", quantity: "20 cl", expires_on: addDays(t, 1) },
+        { name: "Jambon", expires_on: addDays(t, -2) },
+      ],
+    });
+    expect(added.data.added).toHaveLength(3);
+    const stock = await call("get_stock");
+    expect(stock.data.items.map((i: { name: string; status: string; days_left: number | null }) => [i.name, i.status, i.days_left])).toEqual([
+      ["Jambon", "perime", -2],
+      ["Crème fraîche", "bientot", 1],
+      ["Pâtes", "sans-date", null],
+    ]);
+    expect(stock.data).toMatchObject({ expired_count: 1, eat_soon_count: 1 });
+    expect((await call("get_stock", { location: "placard" })).data.items).toHaveLength(1);
+
+    const [jambon, creme] = stock.data.items;
+    expect((await call("update_stock_item", { id: creme.id, quantity: "un fond", location: "frigo" })).data).toMatchObject({
+      name: "Crème fraîche",
+      quantity: "un fond",
+    });
+    expect(await call("remove_stock_items", { ids: [jambon.id] })).toMatchObject({ data: { removed: 1 } });
+    expect((await call("get_stock")).data.items).toHaveLength(2);
+    expect(await call("update_stock_item", { id: jambon.id, quantity: "1" })).toMatchObject({ isError: true });
+    expect(await call("add_stock_items", { items: [{ name: "Lait", location: "cave" }] })).toMatchObject({ isError: true });
   });
 
   it("reports invalid input as a clear tool error", async () => {

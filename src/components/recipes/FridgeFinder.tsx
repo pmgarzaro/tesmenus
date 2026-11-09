@@ -8,15 +8,31 @@ import { type FridgeRecipe, matchFridge } from "@/lib/recipes/fridge";
 import { fold } from "@/lib/recipes/normalize";
 import { capitalize } from "@/lib/shopping/aggregate";
 
-export function FridgeFinder({ recipes, suggestions, pantry }: { recipes: FridgeRecipe[]; suggestions: string[]; pantry: string[] }) {
-  const [owned, setOwned] = useState<string[]>([]);
+export function FridgeFinder({
+  recipes,
+  suggestions,
+  pantry,
+  stock = [],
+  initial = [],
+}: {
+  recipes: FridgeRecipe[];
+  suggestions: string[];
+  pantry: string[];
+  /** Names of the items in the household's stock (still good), soonest date first. */
+  stock?: string[];
+  initial?: string[];
+}) {
+  const [owned, setOwned] = useState<string[]>(initial);
   const [draft, setDraft] = useState("");
   const results = useMemo(() => matchFridge(recipes, owned, pantry), [recipes, owned, pantry]);
 
   const add = (raw: string) => {
-    const items = raw.split(/[,;\n]/).map((s) => s.trim()).filter(Boolean);
-    setOwned((o) => [...o, ...items.filter((i) => !o.some((x) => fold(x) === fold(i)))]);
+    addAll(raw.split(/[,;\n]/));
     setDraft("");
+  };
+  const addAll = (list: string[]) => {
+    const items = list.map((s) => s.trim()).filter(Boolean);
+    setOwned((o) => items.reduce((acc, i) => (acc.some((x) => fold(x) === fold(i)) ? acc : [...acc, i]), o));
   };
   const hints = draft.trim().length >= 2 ? suggestions.filter((s) => fold(s).includes(fold(draft)) && !owned.includes(s)).slice(0, 6) : [];
 
@@ -47,6 +63,11 @@ export function FridgeFinder({ recipes, suggestions, pantry }: { recipes: Fridge
               </button>
             ))}
           </div>
+        )}
+        {stock.some((s) => !owned.some((o) => fold(o) === fold(s))) && (
+          <button onClick={() => addAll(stock)} className="rounded-full border border-teal-600 px-3 py-1 text-sm font-semibold text-teal-700">
+            + Tout mon stock ({stock.length})
+          </button>
         )}
         {owned.length > 0 && (
           <div className="flex flex-wrap gap-1.5">

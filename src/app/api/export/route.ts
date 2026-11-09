@@ -49,6 +49,7 @@ export async function GET() {
       .where(inArray(schema.shoppingListItems.planId, planIds))
       .all(),
     batchSessions: db.select().from(schema.batchSessions).where(eq(schema.batchSessions.householdId, h)).all(),
+    stockItems: db.select().from(schema.stockItems).where(eq(schema.stockItems.householdId, h)).all(),
     settings: db.select().from(schema.settings).where(eq(schema.settings.householdId, h)).all(),
     // Personal data of the signed-in user only.
     mealLog: db.select().from(schema.mealLog).where(eq(schema.mealLog.userId, user.id)).all(),
