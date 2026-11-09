@@ -88,4 +88,21 @@ test("parcours principal", async ({ page }) => {
   await expect(page.getByText(/Étape 1\//)).toBeVisible();
   await page.getByRole("button", { name: "Suivant" }).click();
   await expect(page.getByText(/Étape 2\//)).toBeVisible();
+
+  // Stock: what is in the fridge, soonest date first, expired ones thrown away
+  await page.goto("/stock");
+  await page.fill("[name=name]", "Yaourts");
+  await page.fill("[name=quantity]", "4");
+  await page.getByRole("button", { name: "+3 j" }).click();
+  await page.getByRole("button", { name: "Ajouter au stock" }).click();
+  await expect(page.getByText("Ajouté.")).toBeVisible();
+  await page.fill("[name=name]", "Jambon");
+  await page.locator("input[name=expiresOn]").first().fill("2020-01-01");
+  await page.getByRole("button", { name: "Ajouter au stock" }).click();
+  await expect(page.getByRole("heading", { name: /Date dépassée \(1\)/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Plus tard \(1\)/ })).toBeVisible();
+  await page.getByRole("button", { name: "Jeter : Jambon" }).click();
+  await expect(page.getByRole("heading", { name: /Date dépassée/ })).toHaveCount(0);
+  await page.getByRole("link", { name: "Que cuisiner ?" }).click();
+  await expect(page.getByRole("button", { name: /Yaourts/ })).toBeVisible();
 });

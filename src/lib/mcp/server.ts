@@ -17,12 +17,14 @@ import {
 } from "@/lib/journal/repo";
 import { addDays, today } from "@/lib/planning/dates";
 import { MEASURES } from "@/lib/body/measures";
+import { STOCK_LOCATIONS } from "@/db/schema";
 import { deleteBodyEntry, saveBodyEntry } from "@/lib/body/repo";
 import { createRecipeFromMcp, createRecipeShape } from "./recipes";
 import { createPlanFromMcp, createPlanShape, setMealShape, setPlannedMeal, shoppingListView } from "./planning";
+import { addStockFromMcp, addStockShape, removeStockFromMcp, stockView, updateStockFromMcp, updateStockShape } from "./stock";
 import { bodyEntryView, bodyLogView, logEntryView, mealLogView, plannedMeals, recipeView, searchRecipes, targetsView } from "./data";
 
-export const SERVER_INFO = { name: "tesmenus", version: "1.3.0" };
+export const SERVER_INFO = { name: "tesmenus", version: "1.4.0" };
 
 const INSTRUCTIONS = `Tes menus : planning de repas, recettes et journal alimentaire de l'utilisateur.
 Dates au format YYYY-MM-DD, fuseau Europe/Paris ; sans date, c'est aujourd'hui (${"<today>"}).
@@ -31,6 +33,7 @@ Pour tenir le journal : log_meal avec tes estimations est_kcal, est_protein_g, e
 Planning : create_meal_plan crée un planning (tirage automatique de l'app, repas choisis, ou les deux), set_planned_meal change un repas, get_shopping_list donne les courses d'une période.
 Pour ajouter une recette à la bibliothèque du foyer : create_recipe (vérifie d'abord avec search_recipes qu'elle n'existe pas).
 Poids et mensurations : log_body_measurement pour noter, get_body_measurements pour suivre la tendance (moyenne 7 jours, rythme par semaine, évolution du tour de taille).
+Stock du foyer (frigo, congélateur, placards) : get_stock pour voir ce qui est périmé ou à manger vite, add_stock_items après les courses, remove_stock_items quand c'est fini ou jeté. Pour « qu'est-ce que je cuisine avec ce que j'ai », croiser get_stock et search_recipes en priorisant ce qui périme bientôt.
 N'appelle set_nutrition_targets que si l'utilisateur le demande explicitement.`;
 
 const optionalDate = dateSchema.optional().describe("Date YYYY-MM-DD (Europe/Paris). Par défaut : aujourd'hui.");
@@ -406,6 +409,55 @@ export function createMcpServer(owner: Owner): McpServer {
         if (!deleteBodyEntry(owner, date)) throw new JournalError(`Aucun relevé le ${date}`);
         return { deleted: true };
       }),
+  );
+
+  server.registerTool(
+    "get_stock",
+    {
+      title: "Stock (frigo, placards)",
+      description:
+        "Ce que le foyer a chez lui, trié par date (la plus proche d'abord, sans date à la fin). " +
+        "status : perime (date passée — au frigo à jeter ; au placard / congélateur c'est souvent une date de durabilité minimale, à vérifier), " +
+        "bientot (dans moins de soon_days jours, à manger en priorité), ok, sans-date. days_left négatif = jours depuis la date.",
+      inputSchema: { location: z.enum(STOCK_LOCATIONS).optional().describe("Filtrer : frigo | congelateur | placard") },
+      annotations: readOnly,
+    },
+    ({ location }) => run(() => stockView(owner, location)),
+  );
+
+  server.registerTool(
+    "add_stock_items",
+    {
+      title: "Ajouter au stock",
+      description:
+        "Ajoute des articles au stock du foyer (ex. après les courses), avec leur date de péremption si l'utilisateur la donne. " +
+        "N'invente pas de date : sans information, laisser expires_on vide.",
+      inputSchema: addStockShape,
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    },
+    (a) => run(() => addStockFromMcp(owner, a)),
+  );
+
+  server.registerTool(
+    "update_stock_item",
+    {
+      title: "Modifier un article du stock",
+      description: "Modifie un article du stock (quantité restante, date, emplacement, note). Seuls les champs fournis changent ; null efface.",
+      inputSchema: updateStockShape,
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    },
+    (a) => run(() => updateStockFromMcp(owner, a)),
+  );
+
+  server.registerTool(
+    "remove_stock_items",
+    {
+      title: "Retirer du stock",
+      description: "Retire des articles du stock (mangés ou jetés). Ne retirer que ce que l'utilisateur a fini ou jeté.",
+      inputSchema: { ids: z.array(z.number().int().positive()).min(1).max(100).describe("Identifiants (voir get_stock)") },
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
+    },
+    ({ ids }) => run(() => removeStockFromMcp(owner, ids)),
   );
 
   return server;

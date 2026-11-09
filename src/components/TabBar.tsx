@@ -29,6 +29,12 @@ const ICONS: Record<string, React.ReactNode> = {
       <circle cx="17" cy="19" r="1.5" />
     </>
   ),
+  stock: (
+    <>
+      <rect x="6" y="2.5" width="12" height="19" rx="2" />
+      <path d="M6 9.5h12M9 5.5v2M9 12.5v3" />
+    </>
+  ),
   batch: (
     <>
       <path d="M4 10h16v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z" />
@@ -50,6 +56,7 @@ const TABS = [
   { href: "/planning", label: "Planning", icon: "planning", magnet: "bg-magnet-blue text-white", text: "text-magnet-blue-dark" },
   { href: "/journal", label: "Journal", icon: "journal", magnet: "bg-violet-600 text-white", text: "text-violet-700" },
   { href: "/courses", label: "Courses", icon: "courses", magnet: "bg-magnet-red text-white", text: "text-magnet-red-dark" },
+  { href: "/stock", label: "Stock", icon: "stock", magnet: "bg-teal-600 text-white", text: "text-teal-700" },
   { href: "/batch", label: "Batch", icon: "batch", magnet: "bg-magnet-yellow text-ink", text: "text-[#7a5a00]" },
   { href: "/reglages", label: "Réglages", icon: "reglages", magnet: "bg-ink text-white", text: "text-ink" },
 ];

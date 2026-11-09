@@ -250,6 +250,27 @@ export const invites = sqliteTable("invites", {
   usedAt: text("used_at"),
 });
 
+// What the household has at home (fridge, freezer, cupboards), with best-before
+// dates, to see what must be eaten soon and what must be thrown away.
+export const STOCK_LOCATIONS = ["frigo", "congelateur", "placard"] as const;
+
+export const stockItems = sqliteTable(
+  "stock_items",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    householdId: householdId(),
+    name: text("name").notNull(),
+    /** Free text: "500 g", "2 boîtes", "un fond". */
+    quantity: text("quantity"),
+    location: text("location", { enum: STOCK_LOCATIONS }).notNull().default("frigo"),
+    /** Use-by / best-before date, YYYY-MM-DD; null = keeps (salt, pasta…). */
+    expiresOn: text("expires_on"),
+    note: text("note"),
+    createdAt: createdAt(),
+  },
+  (t) => [index("stock_items_household_idx").on(t.householdId)],
+);
+
 // ---------------------------------------------------------------------------
 // Food journal and nutrition targets. Personal (per user), not per household:
 // each member logs what they actually ate. Written by the app and by Claude
