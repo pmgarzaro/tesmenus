@@ -3,7 +3,9 @@ import { getDb, schema } from "@/db";
 import { fold, guessAisle, parseIngredientLine } from "@/lib/recipes/normalize";
 import { addDays, isValidDate } from "@/lib/planning/dates";
 import { getSettings, saveSettings } from "@/lib/settings";
+import { listStock } from "@/lib/stock/repo";
 import { type NeedLine, type ShoppingItem, aggregate, formatItemAmounts } from "./aggregate";
+import { type StockCover, coverFromStock, formatAmounts, usableStock } from "./stock";
 
 // ---------------------------------------------------------------------------
 // Periods: a list can cover only the meals cooked between two dates of the
@@ -152,7 +154,17 @@ export function linesOf(planEntries: (typeof schema.mealPlanEntries.$inferSelect
   });
 }
 
-export type ListItem = ShoppingItem & { amount: string; checked: boolean; removed: boolean; pantry: boolean };
+export type ListItem = ShoppingItem & {
+  /** Amount to buy (what the meals need minus the stock). */
+  amount: string;
+  /** What the meals need, when the stock changes the amount. */
+  needed: string | null;
+  /** Matching items of the household's stock, if any. */
+  stock: StockCover | null;
+  checked: boolean;
+  removed: boolean;
+  pantry: boolean;
+};
 export type ManualItem = { id: number; label: string; aisle: ShoppingItem["aisle"]; checked: boolean };
 
 const inList = (planId: number, period: string) =>
@@ -171,13 +183,20 @@ export function getShoppingList(householdId: number, planId: number, from?: stri
   // Beyond this plan, the meals of the next plans count too (one trip for both weeks).
   const lines =
     period.to > planEnd ? linesOf(entriesBetween(householdId, period.from, period.to)) : needLines(planId, period.from, period.to);
-  const items: ListItem[] = aggregate(lines).map((i) => ({
-    ...i,
-    amount: formatItemAmounts(i),
-    checked: state.get(i.ingredientId)?.checked ?? false,
-    removed: state.get(i.ingredientId)?.removed ?? false,
-    pantry: pantry.has(fold(i.name)),
-  }));
+  const stock = usableStock(listStock(householdId));
+  const items: ListItem[] = aggregate(lines).map((i) => {
+    const cover = coverFromStock(i, stock);
+    const reduced = cover && !cover.covered && !cover.unsure;
+    return {
+      ...i,
+      amount: cover?.covered ? "" : reduced ? formatAmounts(cover.toBuy) : formatItemAmounts(i),
+      needed: cover?.covered || reduced ? formatItemAmounts(i) || null : null,
+      stock: cover,
+      checked: state.get(i.ingredientId)?.checked ?? false,
+      removed: state.get(i.ingredientId)?.removed ?? false,
+      pantry: pantry.has(fold(i.name)),
+    };
+  });
   const manual: ManualItem[] = rows
     .filter((r) => r.manual)
     .map((r) => ({ id: r.id, label: r.freeLabel ?? "", aisle: r.aisle ?? "autre", checked: r.checked }));

@@ -2,6 +2,8 @@
 import { z } from "zod";
 import { STOCK_LOCATIONS } from "@/db/schema";
 import { dateSchema } from "@/lib/journal/input";
+import { ingredientKey, parseIngredientLine } from "@/lib/recipes/normalize";
+import type { Unit } from "@/lib/recipes/units";
 
 export type StockLocation = (typeof STOCK_LOCATIONS)[number];
 
@@ -73,3 +75,33 @@ export const stockPatchSchema = z.object({
 
 export type StockItemInput = z.input<typeof stockItemSchema>;
 export type StockPatch = z.input<typeof stockPatchSchema>;
+
+// ---------------------------------------------------------------------------
+// Matching stock items with recipe ingredients.
+
+const LINK_WORDS = /^(de|d'|du|des|a|au|aux|en|pour)\b/;
+
+/**
+ * Same food? "yaourts nature" ↔ "yaourt", "crème fraîche" ↔ "crème fraîche
+ * épaisse", but not "lait" ↔ "lait de coco" nor "poulet" ↔ "bouillon de poulet":
+ * one name must start the other and the rest must not be "de …".
+ */
+export function sameFood(a: string, b: string): boolean {
+  const [x, y] = [ingredientKey(a), ingredientKey(b)];
+  if (!x || !y) return false;
+  if (x === y) return true;
+  const [short, long] = x.length < y.length ? [x, y] : [y, x];
+  if (!long.startsWith(`${short} `)) return false;
+  return !LINK_WORDS.test(long.slice(short.length + 1));
+}
+
+/**
+ * Amount of a stock item from its free text: "500 g", "4", "2 boîtes",
+ * "une boîte". null when it cannot be read ("un fond", "1 paquet entamé").
+ */
+export function parseStockQuantity(text: string | null): { quantity: number; unit: Unit } | null {
+  if (!text?.trim()) return null;
+  const parsed = parseIngredientLine(`${text.trim().replace(/^une?\b/i, "1")} x`);
+  if (parsed.quantity === null || parsed.name !== "x") return null;
+  return { quantity: parsed.quantity, unit: parsed.unit ?? "piece" };
+}

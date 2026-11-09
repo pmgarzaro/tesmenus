@@ -43,6 +43,25 @@ describe("shopping list", () => {
     expect(shop.getShoppingList(other, planId)).toBeNull();
   });
 
+  it("takes the household's stock into account", async () => {
+    const { addStockItem, removeStockItems } = await import("@/lib/stock/repo");
+    const ids = [
+      addStockItem(h, { name: "Bœuf haché", quantity: "500 g" }),
+      addStockItem(h, { name: "Oignons", quantity: "5", location: "placard" }),
+      addStockItem(h, { name: "Spaghetti", quantity: "un fond", location: "placard" }),
+      addStockItem(h, { name: "Tomates concassées", quantity: "1 kg", expiresOn: "2020-01-01" }), // date passed: not counted
+      addStockItem(other, { name: "Cumin" }),
+    ].map((i) => i.id);
+    const list = shop.getShoppingList(h, planId)!;
+    expect(item(list, "bœuf haché")).toMatchObject({ amount: "200 g", needed: "700 g", stock: { covered: false, have: ["Bœuf haché (500 g)"] } });
+    expect(item(list, "oignon")).toMatchObject({ amount: "", needed: "3", stock: { covered: true } });
+    expect(item(list, "spaghetti")).toMatchObject({ amount: "200 g", needed: null, stock: { unsure: true } });
+    expect(item(list, "tomates concassées")).toMatchObject({ amount: "800 g", stock: null });
+    expect(item(list, "cumin").stock).toBeNull();
+    removeStockItems(h, ids);
+    removeStockItems(other, ids);
+  });
+
   it("keeps checked / removed state, manual items and the pantry", () => {
     const beef = item(shop.getShoppingList(h, planId)!, "bœuf haché").ingredientId;
     expect(shop.setItemState(h, planId, "", beef, { checked: true })).toBe(true);

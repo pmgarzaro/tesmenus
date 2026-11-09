@@ -75,3 +75,26 @@ describe("stock repository", () => {
     expect(stock.removeStockItems(mine, [])).toBe(0);
   });
 });
+
+describe("matching with recipes", () => {
+  it("matches the same food, not a different one sharing a word", async () => {
+    const { sameFood } = await import("./stock");
+    expect(sameFood("Yaourts nature", "yaourt")).toBe(true);
+    expect(sameFood("Crème fraîche", "crème fraîche épaisse")).toBe(true);
+    expect(sameFood("Œufs", "oeuf")).toBe(true);
+    expect(sameFood("Lait de coco", "lait")).toBe(false);
+    expect(sameFood("Poulet", "bouillon de poulet")).toBe(false);
+    expect(sameFood("Riz", "radis")).toBe(false);
+  });
+
+  it("reads the quantity typed in the stock", async () => {
+    const { parseStockQuantity } = await import("./stock");
+    expect(parseStockQuantity("500 g")).toEqual({ quantity: 500, unit: "g" });
+    expect(parseStockQuantity("4")).toEqual({ quantity: 4, unit: "piece" });
+    expect(parseStockQuantity("une boîte")).toEqual({ quantity: 1, unit: "boite" });
+    expect(parseStockQuantity("1,5 l")).toEqual({ quantity: 1.5, unit: "l" });
+    expect(parseStockQuantity("un fond")).toBeNull();
+    expect(parseStockQuantity("1 paquet")).toBeNull();
+    expect(parseStockQuantity(null)).toBeNull();
+  });
+});

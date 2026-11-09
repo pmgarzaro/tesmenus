@@ -1,6 +1,7 @@
 // Weekly meal plan generation: deterministic (seeded) and testable, no LLM.
 import type { MEAL_TYPES, SLOTS } from "@/db/schema";
 import { fold } from "@/lib/recipes/normalize";
+import { daysLeft, sameFood } from "@/lib/stock/stock";
 import { addDays, dateRange, shortDate } from "./dates";
 
 export type Slot = (typeof SLOTS)[number];
@@ -41,6 +42,8 @@ export type PlanOptions = {
   fixed?: Record<string, number | null>;
   /** Recipes not to pick (e.g. the one being replaced). */
   avoid?: number[];
+  /** Stock items with a date: recipes that use them before that date are favoured. */
+  stock?: { name: string; expiresOn: string }[];
   seed?: number;
 };
 
@@ -141,6 +144,26 @@ function score(r: PlannerRecipe, previous: PlannerRecipe | undefined, chosen: Pl
   return s;
 }
 
+type StockItem = NonNullable<PlanOptions["stock"]>[number];
+
+/** Stock items a recipe uses up. */
+const stockUsedBy = (r: PlannerRecipe, stock: StockItem[]) =>
+  stock.filter((x) => r.ingredientNames.some((n) => sameFood(x.name, n)));
+
+/**
+ * Bonus for cooking `r` on `date` with stock items not used yet: only
+ * before their date, more for the most urgent ones (the day itself: 28).
+ */
+function stockBonus(r: PlannerRecipe, date: string, stock: StockItem[], usedUp: Set<StockItem>): number {
+  let bonus = 0;
+  for (const x of stockUsedBy(r, stock)) {
+    const left = daysLeft(x.expiresOn, date)!;
+    if (usedUp.has(x) || left < 0) continue;
+    bonus += 18 + 2 * Math.max(0, 5 - left);
+  }
+  return Math.min(bonus, 45);
+}
+
 function attempt(o: PlanOptions, pool: PlannerRecipe[], cooks: CookSlot[], random: () => number) {
   const c = o.constraints ?? {};
   const byId = new Map(pool.map((r) => [r.id, r]));
@@ -150,11 +173,15 @@ function attempt(o: PlanOptions, pool: PlannerRecipe[], cooks: CookSlot[], rando
   const used = new Set<number>();
   const warnings: string[] = [];
   let total = 0;
+  const stock = o.stock ?? [];
+  const usedUp = new Set<StockItem>();
+  const useUp = (r: PlannerRecipe | undefined) => r && stockUsedBy(r, stock).forEach((x) => usedUp.add(x));
 
   for (const [key, id] of Object.entries(o.fixed ?? {})) {
     if (!cooks.some((s) => s.key === key)) continue;
     assigned.set(key, id);
     if (id !== null) used.add(id);
+    if (id !== null) useUp(byId.get(id));
   }
 
   // Included recipes first, in the first free slot where they fit.
@@ -165,6 +192,7 @@ function attempt(o: PlanOptions, pool: PlannerRecipe[], cooks: CookSlot[], rando
     if (slot) {
       assigned.set(slot.key, id);
       used.add(id);
+      useUp(r);
     } else warnings.push(`« ${r.title} » n'a pas trouvé de place (temps maximum).`);
   }
 
@@ -191,12 +219,17 @@ function attempt(o: PlanOptions, pool: PlannerRecipe[], cooks: CookSlot[], rando
     }
     const scored = candidates.map((r) => ({
       r,
-      s: score(r, previous, chosen, recent) - (used.has(r.id) ? penalty : 0) + random() * 12,
+      s:
+        score(r, previous, chosen, recent) +
+        stockBonus(r, s.date, stock, usedUp) -
+        (used.has(r.id) ? penalty : 0) +
+        random() * 12,
     }));
     scored.sort((a, b) => b.s - a.s);
     const best = scored[0];
     assigned.set(s.key, best.r.id);
     used.add(best.r.id);
+    useUp(best.r);
     total += best.s;
     previous = best.r;
   }
@@ -228,6 +261,8 @@ function planBreakfasts(o: PlanOptions, recipes: PlannerRecipe[], random: () => 
   let previous: number | null = null;
   let cook: { key: string; covered: number } | null = null;
   const counts = new Map<number, number>();
+  const stock = o.stock ?? [];
+  const usedUp = new Set<StockItem>();
 
   for (const date of dates) {
     const key = cellKey(date, "matin");
@@ -254,9 +289,16 @@ function planBreakfasts(o: PlanOptions, recipes: PlannerRecipe[], random: () => 
       candidates
         .map((r) => ({
           id: r.id,
-          s: (r.id === previous ? -20 : 0) - 8 * (counts.get(r.id) ?? 0) - (recent.has(r.id) ? 5 : 0) + random() * 6,
+          s:
+            (r.id === previous ? -20 : 0) -
+            8 * (counts.get(r.id) ?? 0) -
+            (recent.has(r.id) ? 5 : 0) +
+            stockBonus(r, date, stock, usedUp) +
+            random() * 6,
         }))
         .sort((a, b) => b.s - a.s)[0].id;
+    const picked = pool.find((r) => r.id === pick);
+    if (picked) stockUsedBy(picked, stock).forEach((x) => usedUp.add(x));
     counts.set(pick, (counts.get(pick) ?? 0) + 1);
     cells.set(key, { recipeId: pick, servings: o.people, sourceKey: null });
     cook = { key, covered: 1 };

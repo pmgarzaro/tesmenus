@@ -12,6 +12,8 @@ import { fold, normalizeTags } from "@/lib/recipes/normalize";
 import { getSettings } from "@/lib/settings";
 import { AISLE_ORDER, aggregate, formatItemAmounts } from "@/lib/shopping/aggregate";
 import { entriesBetween, linesOf } from "@/lib/shopping/repo";
+import { type StockCover, coverFromStock, formatAmounts, usableStock } from "@/lib/shopping/stock";
+import { listStock } from "@/lib/stock/repo";
 
 const TO_APP = { breakfast: "matin", lunch: "midi", dinner: "soir" } as const;
 const TO_API = { matin: "breakfast", midi: "lunch", soir: "dinner" } as const;
@@ -226,6 +228,15 @@ export function setPlannedMeal(owner: Owner, a: SetArgs) {
 // ---------------------------------------------------------------------------
 // Shopping list for any period (may span several plans)
 
+function stockFields(cover: StockCover | null) {
+  if (!cover) return {};
+  return {
+    in_stock: cover.have,
+    to_buy: cover.covered ? null : formatAmounts(cover.toBuy) || null,
+    ...(cover.unsure ? { stock_unsure: true } : {}),
+  };
+}
+
 export function shoppingListView(owner: Owner, from: string, to: string) {
   if (to < from) throw new JournalError("date_to doit être postérieure ou égale à date_from");
   if (addDays(from, 30) < to) throw new JournalError("Période trop longue : 31 jours maximum");
@@ -233,6 +244,7 @@ export function shoppingListView(owner: Owner, from: string, to: string) {
   const lines = linesOf(entries);
   const pantry = new Set(getSettings(owner.householdId).pantry.map(fold));
   const items = aggregate(lines);
+  const stock = usableStock(listStock(owner.householdId));
   const titles = new Map(lines.map((l) => [l.recipe, true]));
   return {
     date_from: from,
@@ -253,8 +265,11 @@ export function shoppingListView(owner: Owner, from: string, to: string) {
           recipes: i.recipes,
           ...(i.optional ? { optional: true } : {}),
           ...(pantry.has(fold(i.name)) ? { always_in_pantry: true } : {}),
+          ...stockFields(coverFromStock(i, stock)),
         })),
     ),
-    note: "Restes et repas extérieurs non comptés : les ingrédients comptent le jour où le plat est cuisiné. always_in_pantry = « toujours au placard » dans l'app.",
+    note: "Restes et repas extérieurs non comptés : les ingrédients comptent le jour où le plat est cuisiné. always_in_pantry = « toujours au placard » dans l'app. " +
+      "in_stock = articles correspondants du stock (get_stock) ; to_buy = ce qu'il reste à acheter (null = rien, assez en stock) ; " +
+      "stock_unsure = quantité en stock non comparable, à vérifier.",
   };
 }

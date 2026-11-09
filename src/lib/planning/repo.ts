@@ -3,6 +3,7 @@ import { getDb, schema } from "@/db";
 import { listRecipeSummaries } from "@/lib/recipes/repo";
 import { totalMinutes } from "@/lib/recipes/search";
 import { getSettings } from "@/lib/settings";
+import { listStock } from "@/lib/stock/repo";
 import { addDays, dateRange, defaultStartDate, longDate, today } from "./dates";
 import {
   type PlanConstraints,
@@ -20,6 +21,14 @@ type StoredOptions = Pick<PlanOptions, "slots" | "people" | "servingsPerRecipe" 
 };
 
 const randomSeed = () => Math.floor(Math.random() * 2 ** 31);
+
+/** Stock items with a date in the plan's days, to use up first. */
+function stockToUse(householdId: number, startDate: string, days: number): PlanOptions["stock"] {
+  const end = addDays(startDate, days - 1);
+  return listStock(householdId)
+    .filter((i): i is typeof i & { expiresOn: string } => i.expiresOn !== null && i.expiresOn >= startDate && i.expiresOn <= end)
+    .map((i) => ({ name: i.name, expiresOn: i.expiresOn }));
+}
 
 function plannerRecipes(householdId: number): PlannerRecipe[] {
   return listRecipeSummaries(householdId).map((r) => ({ ...r, totalMinutes: totalMinutes(r) }));
@@ -68,7 +77,12 @@ function optionsOf(plan: Plan): PlanOptions {
 
 /** Replaces all entries of a plan with a freshly generated week. */
 function fillPlan(householdId: number, plan: Plan, seed: number): string[] {
-  const options = { ...optionsOf(plan), recentRecipeIds: recentRecipeIds(householdId, plan.startDate, plan.id), seed };
+  const options = {
+    ...optionsOf(plan),
+    recentRecipeIds: recentRecipeIds(householdId, plan.startDate, plan.id),
+    stock: stockToUse(householdId, plan.startDate, plan.days),
+    seed,
+  };
   const { entries, warnings } = generatePlan(options, plannerRecipes(householdId));
   getDb().transaction((tx) => {
     tx.delete(schema.mealPlanEntries).where(eq(schema.mealPlanEntries.planId, plan.id)).run();
@@ -321,6 +335,7 @@ export function fillEmptyEntries(householdId: number, planId: number, onlyIds?: 
         breakfastDays: 1,
         fixed,
         recentRecipeIds: recentRecipeIds(householdId, plan.startDate, plan.id),
+        stock: stockToUse(householdId, plan.startDate, plan.days),
         seed: randomSeed(),
       },
       plannerRecipes(householdId),
@@ -459,6 +474,7 @@ export function rerollEntry(householdId: number, entryId: number): boolean {
     fixed,
     avoid: owned.entry.recipeId ? [owned.entry.recipeId] : [],
     recentRecipeIds: recentRecipeIds(householdId, plan.startDate, plan.id),
+    stock: stockToUse(householdId, plan.startDate, plan.days),
     seed: randomSeed(),
   };
   const { entries } = generatePlan(options, plannerRecipes(householdId));

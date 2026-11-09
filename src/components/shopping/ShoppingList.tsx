@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Ellipsis, House, Infinity, RotateCw, Share2, X } from "lucide-react";
+import { Check, Ellipsis, House, Infinity, Refrigerator, RotateCw, Share2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useOptimistic, useState, useTransition } from "react";
 import { type ShopAction, shopAction } from "@/app/(app)/courses/actions";
@@ -62,7 +62,10 @@ export function ShoppingList({
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, [router]);
 
-  const active = state.items.filter((i) => !i.removed && !i.pantry);
+  const shown = state.items.filter((i) => !i.removed && !i.pantry);
+  // Enough in the household's stock: shown struck through, nothing to buy.
+  const inStock = shown.filter((i) => i.stock?.covered);
+  const active = shown.filter((i) => !i.stock?.covered);
   const rows: (Row & { aisle: (typeof AISLE_ORDER)[number] })[] = [
     ...active.map((item) => ({ kind: "item" as const, item, checked: item.checked, aisle: item.aisle })),
     ...state.manual.map((item) => ({ kind: "manual" as const, item, checked: item.checked, aisle: item.aisle })),
@@ -149,13 +152,14 @@ export function ShoppingList({
 
       {rows.length === 0 && (
         <p className="rounded-2xl border border-dashed border-stone-300 p-6 text-center text-stone-500">
-          Rien à acheter : le planning ne contient pas encore de recettes.
+          {inStock.length > 0 ? "Rien à acheter : tout est déjà en stock." : "Rien à acheter : le planning ne contient pas encore de recettes."}
         </p>
       )}
 
       {AISLE_ORDER.map((aisle, aisleIndex) => {
         const inAisle = rows.filter((r) => r.aisle === aisle).sort((a, b) => Number(a.checked) - Number(b.checked));
-        if (inAisle.length === 0) return null;
+        const stocked = inStock.filter((i) => i.aisle === aisle);
+        if (inAisle.length === 0 && stocked.length === 0) return null;
         return (
           <section key={aisle} className="paper px-3 pb-1 pt-3">
             <h2 className="flex items-center gap-2.5 px-1 pb-1">
@@ -186,6 +190,13 @@ export function ShoppingList({
                             {r.item.recipes.join(", ")}
                           </span>
                         )}
+                        {r.kind === "item" && !r.checked && r.item.stock && (
+                          <span className={`block text-xs ${r.item.stock.unsure ? "text-amber-800" : "text-teal-700"}`}>
+                            <Refrigerator className="mr-1 inline size-3.5 align-[-2px]" aria-hidden />
+                            En stock : {r.item.stock.have.join(", ")}
+                            {r.item.stock.unsure ? " — vérifie s'il en reste assez" : r.item.needed && ` · il en faut ${r.item.needed} en tout`}
+                          </span>
+                        )}
                       </span>
                     </label>
                     <button
@@ -198,6 +209,18 @@ export function ShoppingList({
                   </li>
                 );
               })}
+              {stocked.map((i) => (
+                <li key={`s${i.ingredientId}`} className="flex min-h-10 items-center gap-3 px-1 py-1 text-stone-400">
+                  <Refrigerator className="size-6 shrink-0 text-teal-600" aria-label="En stock" />
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-baseline justify-between gap-2">
+                      <span className="truncate font-bold line-through">{capitalize(i.name)}</span>
+                      {i.needed && <span className="shrink-0 text-sm line-through">{i.needed}</span>}
+                    </span>
+                    <span className="block truncate text-xs text-teal-700">Déjà en stock : {i.stock!.have.join(", ")}</span>
+                  </span>
+                </li>
+              ))}
             </ul>
           </section>
         );
